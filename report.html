@@ -144,9 +144,9 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
   </header>
 
   <div class="kpis">
-    <div class="kpi"><div class="v">12.70%</div><div class="l">均值方差组合年化收益</div></div>
-    <div class="kpi"><div class="v gold">0.86</div><div class="l">夏普比率（风险平价 0.51）</div></div>
-    <div class="kpi"><div class="v">-8.60%</div><div class="l">近一年最大回撤（风险平价 -9.69%）</div></div>
+    <div class="kpi"><div class="v">12.70%</div><div class="l">MV 组合年化收益</div></div>
+    <div class="kpi"><div class="v gold">0.86</div><div class="l">夏普比率（RP 0.51）</div></div>
+    <div class="kpi"><div class="v">-8.60%</div><div class="l">近一年最大回撤（RP -9.69%）</div></div>
     <div class="kpi"><div class="v">-31.2% → -12.5%</div><div class="l">2026 回测：止损把回撤压掉一半</div></div>
   </div>
 
@@ -170,11 +170,11 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
 
     <h3>1.1 本月持仓与目标配置（基准 2026-11-06 真实持仓）</h3>
-    <p>本表以 <strong>2026-11-06 真实持仓</strong>为基准，总资产 <strong>128,475.53 元</strong>（含现金 24.79 元）。均值方差（最大夏普）选入 8 只，其余 11 只权重为 0；现金与 020603 未纳入模型池，权重记 0，但计入市值合计，因此均值方差权重合计为 100.00%。</p>
+    <p>本表以 <strong>2026-11-06 真实持仓</strong>为基准，总资产 <strong>128,475.53 元</strong>（含现金 24.79 元）。MV（最大夏普）选入 8 只，其余 11 只权重为 0；现金与 020603 未纳入模型池，权重记 0，但计入市值合计，因此 MV 权重合计为 100.00%。</p>
     <p><strong>本月不调整持仓</strong>：只执行单基金止损监控，不按目标权重买卖；下表"调仓金额 = 目标权重 × 总资产 − 当前市值"仅作为<strong>下月 1 日重算后的参考</strong>，本月不执行。</p>
     <div class="table-wrap">
       <table class="wide">
-        <thead><tr><th>基金</th><th>大类</th><th class="num">均值方差</th><th class="num">当前市值</th><th class="num">调仓参考（下月）</th></tr></thead>
+        <thead><tr><th>基金</th><th>大类</th><th class="num">MV</th><th class="num">当前市值</th><th class="num">调仓参考（下月）</th></tr></thead>
         <tbody>
           <tr><td>华泰保兴安悦债券C</td><td><span class="badge">固收</span></td><td class="num">30.00%</td><td class="num">38,149.82</td><td class="num pos">+392.84</td></tr>
           <tr><td>易方达恒生港股通红利低波动ETF联接发起式C</td><td><span class="badge">港股 / 红利</span></td><td class="num">30.00%</td><td class="num">38,397.00</td><td class="num pos">+145.66</td></tr>
@@ -201,11 +201,11 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         </tbody>
       </table>
     </div>
-    <p class="cap">现金与其他持仓（020603 易方达中证红利低波动ETF联接发起式C 60.56 元）在表内单列、均值方差权重记 0，不参与模型配置与止损监控。模型池内买入合计 28,844.30 元、卖出合计 28,758.95 元，净额 +85.35 元（该净额等于现金与其他持仓的市值，属未配置部分）。</p>
+    <p class="cap">现金与其他持仓（020603 易方达中证红利低波动ETF联接发起式C 60.56 元）在表内单列、MV 权重记 0，不参与模型配置与止损监控。模型池内买入合计 28,844.30 元、卖出合计 28,758.95 元，净额 +85.35 元（该净额等于现金与其他持仓的市值，属未配置部分）。</p>
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>组合指标</th><th class="num">均值方差（最大夏普）</th><th class="num">风险平价（ERC）</th></tr></thead>
+        <thead><tr><th>组合指标</th><th class="num">MV（最大夏普）</th><th class="num">RP（ERC）</th></tr></thead>
         <tbody>
           <tr><td>年化收益率</td><td class="num pos">12.70%</td><td class="num pos">7.49%</td></tr>
           <tr><td>年化波动率</td><td class="num">12.50%</td><td class="num">10.66%</td></tr>
@@ -221,10 +221,10 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <figcaption>图 1：双模型最优配置权重对比（单位：%）</figcaption>
       <div id="chart-weights" class="chart-box"></div>
     </figure>
-    <p class="cap">均值方差受 30% 单只上限约束，债券与港股红利均顶格；风险平价不加上限，债券因波动最低而自然获得 42.47% 的最高权重。</p>
+    <p class="cap">MV 受 30% 单只上限约束，债券与港股红利均顶格；RP 不加上限，债券因波动最低而自然获得 42.47% 的最高权重。</p>
 
     <h3>1.2 今日止损监控（2026-11-06）</h3>
-    <p>按均值方差目标权重监控的 8 只持仓。回撤基准为各基金自<strong>本轮建仓起点（2026-11-06）</strong>以来的最高净值；此后<strong>跨月连续跟踪</strong>，月度调仓只改权重、不清零高点，只有被调出组合（清仓）时才重置。</p>
+    <p>按 MV 目标权重监控的 8 只持仓。回撤基准为各基金自<strong>本轮建仓起点（2026-11-06）</strong>以来的最高净值；此后<strong>跨月连续跟踪</strong>，月度调仓只改权重、不清零高点，只有被调出组合（清仓）时才重置。</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>基金</th><th class="num">权重</th><th class="num">当前净值指数</th><th class="num">自高点回撤</th><th>状态</th><th>动作 / 提示</th></tr></thead>
@@ -262,11 +262,11 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     </figure>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>区间</th><th class="num">均值方差</th><th class="num">风险平价</th><th>说明</th></tr></thead>
+        <thead><tr><th>区间</th><th class="num">MV</th><th class="num">RP</th><th>说明</th></tr></thead>
         <tbody>
-          <tr><td>近 1 个月（2026-10-08 起）</td><td class="num neg">-1.36%</td><td class="num neg">-0.13%</td><td>风险平价几乎持平</td></tr>
+          <tr><td>近 1 个月（2026-10-08 起）</td><td class="num neg">-1.36%</td><td class="num neg">-0.13%</td><td>RP 几乎持平</td></tr>
           <tr><td>近 3 个月（2026-08-06 起）</td><td class="num neg">-2.45%</td><td class="num neg">-2.88%</td><td>两个模型跌幅相近</td></tr>
-          <tr><td>今年以来（2026-01-05 起）</td><td class="num neg">-3.68%</td><td class="num neg">-4.89%</td><td>均值方差靠港股红利与债券扛住回撤</td></tr>
+          <tr><td>今年以来（2026-01-05 起）</td><td class="num neg">-3.68%</td><td class="num neg">-4.89%</td><td>MV 靠港股红利与债券扛住回撤</td></tr>
         </tbody>
       </table>
     </div>
@@ -283,7 +283,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <figcaption>图 6：19 只基金近一年日收益相关系数矩阵（Pearson）</figcaption>
       <div id="chart-corr" class="chart-box"></div>
     </figure>
-    <p class="cap">色阶由蓝（负相关）到红（正相关），格内显示两位小数的相关系数，悬停可看两只基金全称与精确值。<strong>★ 为均值方差模型选中（权重 &gt; 0，8 只）；◇ 为 2026-11-06 真实持有（7 只）；★◇ 表示两者一致。差异——模型选中但当前未持有：广发中证全指家用电器ETF联接C（模型权重 22.03%，真实份额为 0）。</strong></p>
+    <p class="cap">色阶由蓝（负相关）到红（正相关），格内显示两位小数的相关系数，悬停可看两只基金全称与精确值。<strong>★ 为 MV 模型选中（权重 &gt; 0，8 只）；◇ 为 2026-11-06 真实持有（7 只）；★◇ 表示两者一致。差异——模型选中但当前未持有：广发中证全指家用电器ETF联接C（模型权重 22.03%，真实份额为 0）。</strong></p>
 
     <h3>2.4 组合与主要指数：2026 年以来累计收益率</h3>
     <p>按 <strong>2026-11-06 真实持仓</strong>的份额折算固定权重（份额固定、不做再平衡），自 2026-01-05 起以日收益加权累积；四条指数取同一起点归一化为 0%。<strong>图中组合为“按 2026-11-06 真实持仓固定权重回测”，非实际逐笔交易收益，也不含申赎与费用。</strong></p>
@@ -377,7 +377,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
     <h3>纪律红线</h3>
     <ul>
-      <li><strong>只按模型调仓，不主观加码。</strong>单只基金权重不超过 30%（风险平价模式例外，债券 42.47% 由模型给出）。</li>
+      <li><strong>只按模型调仓，不主观加码。</strong>单只基金权重不超过 30%（RP 模式例外，债券 42.47% 由模型给出）。</li>
       <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减半、15% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
       <li><strong>止损后必须走冷静期。</strong>10 个交易日内禁止回补，且回补需同时满足两个条件。</li>
@@ -411,7 +411,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
           <tr><td>有效区间</td><td>2024-07-02 ~ 2026-11-06（19 只基金全部有净值的公共区间）</td></tr>
           <tr><td>收益率估计</td><td>月度收益：近 3 年平均月收益 × 12 折算年化</td></tr>
           <tr><td>协方差估计</td><td>日度收益近 1 年协方差 × 252 折算年化</td></tr>
-          <tr><td>优化约束</td><td>权重非负、合计为 1、单只基金上限 30%；风险平价不加上限</td></tr>
+          <tr><td>优化约束</td><td>权重非负、合计为 1、单只基金上限 30%；RP 不加上限</td></tr>
           <tr><td>前视偏差控制</td><td>回测权重只用 2025-12-31 及以前的数据估计，之后固定不变</td></tr>
         </tbody>
       </table>
@@ -428,7 +428,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <p>按"风险来源"而非"行业标签"分组，保证同一风险因子的暴露不过度集中；每类内部保留 1~4 只，用于捕捉不同市场环境下的轮动。</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>大类</th><th>基金</th><th class="num">均值方差合计</th><th class="num">风险平价合计</th></tr></thead>
+        <thead><tr><th>大类</th><th>基金</th><th class="num">MV 合计</th><th class="num">RP 合计</th></tr></thead>
         <tbody>
           <tr><td><span class="badge gold">避险 / 商品</span></td><td>国泰黄金ETF联接C</td><td class="num">0.44%</td><td class="num">1.55%</td></tr>
           <tr><td><span class="badge">固收</span></td><td>华泰保兴安悦债券C</td><td class="num">30.00%</td><td class="num">42.47%</td></tr>
@@ -441,7 +441,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         </tbody>
       </table>
     </div>
-    <p class="cap">注：表中权重为该类各基金权重之和；均值方差模型只选入 8 只，未选入基金权重为 0。家用电器（005064）归属"医药消费"大类（可选消费）。</p>
+    <p class="cap">注：表中权重为该类各基金权重之和；MV 模型只选入 8 只，未选入基金权重为 0。家用电器（005064）归属"医药消费"大类（可选消费）。</p>
   </section>
 
   <section class="app" id="a6">
@@ -452,7 +452,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         <thead><tr><th>文件</th><th>作用</th></tr></thead>
         <tbody>
           <tr><td><code>基金数据获取.py</code></td><td>抓取 19 只基金每日净值，生成自动数据文件并做一致性校验</td></tr>
-          <tr><td><code>更新测算.py</code></td><td>均值方差 + 风险平价双模型测算，输出权重、指标、三区间回测与图表</td></tr>
+          <tr><td><code>更新测算.py</code></td><td>MV + RP 双模型测算，输出权重、指标、三区间回测与图表</td></tr>
           <tr><td><code>止损回测.py</code></td><td>单基金止损规则的历史回测</td></tr>
           <tr><td><code>每日止损监控.py</code></td><td>每个交易日的持仓回撤监控与触发记录</td></tr>
           <tr><td><code>投资组合分析明细.xlsx</code></td><td>本月主数据表：原始数据、权重、指标、回测、月度收益等</td></tr>
