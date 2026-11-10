@@ -579,16 +579,16 @@ window.RPT = {"asOf": "2026-11-06", "names": ["东方新能源汽车主题混合
     color: [accent, accent2],
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, appendToBody: true,
       valueFormatter: function (v) { return v.toFixed(2) + '%'; } },
-    legend: { data: ['均值方差（最大夏普）', '风险平价（ERC）'], textStyle: { color: ink }, top: 0 },
+    legend: { data: ['MV（最大夏普）', 'RP（ERC）'], textStyle: { color: ink }, top: 0 },
     grid: { left: 110, right: 40, top: 44, bottom: 20 },
     xAxis: { type: 'value', max: 45, axisLabel: { color: muted, formatter: '{value}%' },
       splitLine: { lineStyle: { color: rule } } },
     yAxis: { type: 'category', data: cats, axisLine: { lineStyle: { color: rule } },
       axisTick: { show: false }, axisLabel: { color: ink, fontSize: 11 } },
     series: [
-      { name: '均值方差（最大夏普）', type: 'bar', data: order.map(function (i) { return D.mvW[i]; }),
+      { name: 'MV（最大夏普）', type: 'bar', data: order.map(function (i) { return D.mvW[i]; }),
         barWidth: 7, itemStyle: { borderRadius: [0, 2, 2, 0] } },
-      { name: '风险平价（ERC）', type: 'bar', data: order.map(function (i) { return D.rpW[i]; }),
+      { name: 'RP（ERC）', type: 'bar', data: order.map(function (i) { return D.rpW[i]; }),
         barWidth: 7, itemStyle: { borderRadius: [0, 2, 2, 0] } }
     ]
   });
@@ -601,15 +601,15 @@ window.RPT = {"asOf": "2026-11-06", "names": ["东方新能源汽车主题混合
     color: [accent, accent2],
     tooltip: { trigger: 'axis', appendToBody: true,
       valueFormatter: function (v) { return v.toFixed(2) + '%'; } },
-    legend: { data: ['均值方差', '风险平价'], textStyle: { color: ink }, top: 0 },
+    legend: { data: ['MV', 'RP'], textStyle: { color: ink }, top: 0 },
     grid: { left: 52, right: 24, top: 44, bottom: 56 },
     xAxis: { type: 'category', data: D.ytd.dates, axisLine: { lineStyle: { color: rule } },
       axisTick: { show: false }, axisLabel: { color: muted, fontSize: 10, interval: 24 } },
     yAxis: { type: 'value', axisLabel: { color: muted, formatter: '{value}%' },
       splitLine: { lineStyle: { color: rule } } },
     series: [
-      { name: '均值方差', type: 'line', data: D.ytd.mv, showSymbol: false, lineStyle: { width: 2 } },
-      { name: '风险平价', type: 'line', data: D.ytd.rp, showSymbol: false, lineStyle: { width: 2 } }
+      { name: 'MV', type: 'line', data: D.ytd.mv, showSymbol: false, lineStyle: { width: 2 } },
+      { name: 'RP', type: 'line', data: D.ytd.rp, showSymbol: false, lineStyle: { width: 2 } }
     ]
   });
   window.addEventListener('resize', function () { cy.resize(); });
@@ -621,16 +621,16 @@ window.RPT = {"asOf": "2026-11-06", "names": ["东方新能源汽车主题混合
     color: [accent, accent2],
     tooltip: { trigger: 'axis', appendToBody: true,
       valueFormatter: function (v) { return v.toFixed(2) + '%'; } },
-    legend: { data: ['均值方差', '风险平价'], textStyle: { color: ink }, top: 0 },
+    legend: { data: ['MV', 'RP'], textStyle: { color: ink }, top: 0 },
     grid: { left: 52, right: 24, top: 44, bottom: 56 },
     xAxis: { type: 'category', data: D.dd.dates, axisLine: { lineStyle: { color: rule } },
       axisTick: { show: false }, axisLabel: { color: muted, fontSize: 10, interval: 24 } },
     yAxis: { type: 'value', axisLabel: { color: muted, formatter: '{value}%' },
       splitLine: { lineStyle: { color: rule } } },
     series: [
-      { name: '均值方差', type: 'line', data: D.dd.mv, showSymbol: false,
+      { name: 'MV', type: 'line', data: D.dd.mv, showSymbol: false,
         areaStyle: { opacity: 0.12 }, lineStyle: { width: 1.5 } },
-      { name: '风险平价', type: 'line', data: D.dd.rp, showSymbol: false,
+      { name: 'RP', type: 'line', data: D.dd.rp, showSymbol: false,
         areaStyle: { opacity: 0.12 }, lineStyle: { width: 1.5 } }
     ]
   });
@@ -664,17 +664,17 @@ window.RPT = {"asOf": "2026-11-06", "names": ["东方新能源汽车主题混合
     color: [accent, accent2],
     tooltip: { trigger: 'axis', appendToBody: true,
       valueFormatter: function (v) { return v.toFixed(2) + '%'; } },
-    legend: { data: ['均值方差', '风险平价'], textStyle: { color: ink }, top: 0 },
+    legend: { data: ['MV', 'RP'], textStyle: { color: ink }, top: 0 },
     grid: { left: 52, right: 24, top: 44, bottom: 32 },
     xAxis: { type: 'category', data: D.windows.labels, axisLine: { lineStyle: { color: rule } },
       axisTick: { show: false }, axisLabel: { color: ink } },
     yAxis: { type: 'value', axisLabel: { color: muted, formatter: '{value}%' },
       splitLine: { lineStyle: { color: rule } } },
     series: [
-      { name: '均值方差', type: 'bar', data: D.windows.mv, barWidth: 26,
+      { name: 'MV', type: 'bar', data: D.windows.mv, barWidth: 26,
         label: { show: true, position: 'bottom', color: muted, fontSize: 10,
           formatter: function (p) { return p.value.toFixed(2) + '%'; } } },
-      { name: '风险平价', type: 'bar', data: D.windows.rp, barWidth: 26,
+      { name: 'RP', type: 'bar', data: D.windows.rp, barWidth: 26,
         label: { show: true, position: 'bottom', color: muted, fontSize: 10,
           formatter: function (p) { return p.value.toFixed(2) + '%'; } } }
     ]
