@@ -127,9 +127,9 @@
     rp: '#8e44ad'
   };
   var NAME = {
-    mv_stop: '均值方差 + 分批止损', mv: '均值方差（不止损）',
+    mv_stop: '均值方差（月调+日止损）', mv: '均值方差（月调·不止损）',
     real_stop: '真实持仓 + 分批止损', real: '真实持仓（不止损）',
-    rp: '风险平价（对比）'
+    rp: '风险平价（月调）'
   };
   var IDX_COLOR = ['#95a5a6', '#7f8c8d', '#bdc3c7', '#a6b1e1', '#d5b8a5', '#9bb7b0', '#c7b8c9', '#b9c0a0'];
 
@@ -149,11 +149,11 @@
 
   // ---------- KPI ----------
   var kpis = [
-    ['mv_stop', '均值方差 + 分批止损', C.mv_stop],
-    ['mv', '均值方差（不止损）', C.mv],
+    ['mv_stop', '均值方差（月调+日止损）', C.mv_stop],
+    ['mv', '均值方差（月调·不止损）', C.mv],
     ['real_stop', '真实持仓 + 分批止损', C.real_stop],
     ['real', '真实持仓（不止损）', C.real],
-    ['rp', '风险平价（对比）', C.rp]
+    ['rp', '风险平价（月调）', C.rp]
   ];
   document.getElementById('kpis').innerHTML = kpis.map(function (k) {
     var v = D.kpi[k[0]];
