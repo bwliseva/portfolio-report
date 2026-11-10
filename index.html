@@ -77,7 +77,6 @@
 
   <section class="card">
     <h2>累计收益率对比</h2>
-    <p class="hint">真实持仓按基准日实际份额固定权重；均值方差与风险平价按目标权重；止损规则为「权益类自高点回撤 ≥10% 减半仓、≥15% 清仓，债券 ≥3% 清仓转现金（收益按 0 计），冷静 10 个交易日、近 20 日收益 &gt; 0 且回撤修复至 -5% 内回补」。</p>
     <div class="toolbar">
       <div class="seg" id="rangeSeg">
         <button data-r="ytd" class="on">今年以来</button>
@@ -93,7 +92,7 @@
 
   <section class="card">
     <h2>当前持仓与止损状态</h2>
-    <p class="hint">按基准日真实份额计算；均值方差权重为已持有基金在模型中的相对权重（归一化至 100%），现金与 020603 未纳入模型，权重记 0。回撤为各基金自本轮监控起点高点的回撤（跨月连续跟踪，调仓不清零）。</p>
+    <p class="hint">数据日：<span id="holdAsOf">—</span>　·　每日更新</p>
     <div class="scroll">
       <table>
         <thead><tr>
@@ -165,6 +164,8 @@
   }).join('');
 
   document.getElementById('asof').textContent = '数据日 ' + D.asof;
+  var holdAsOf = document.getElementById('holdAsOf');
+  if (holdAsOf) holdAsOf.textContent = D.asof;
   document.getElementById('subtitle').textContent = D.subtitle;
 
   // ---------- chips ----------
