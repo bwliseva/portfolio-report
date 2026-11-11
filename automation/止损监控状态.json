@@ -1,0 +1,77 @@
+{
+  "funds": {
+    "国泰黄金ETF联接C": {
+      "peak": 1.7934999999999999,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 197.6408,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "华泰保兴安悦债券C": {
+      "peak": 1.2061,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 32116.2061,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "易方达恒生港股通红利低波动ETF联接发起式C": {
+      "peak": 1.2563,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 33132.1748,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "富国中证煤炭指数C": {
+      "peak": 1.1961,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 2165.0037,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "嘉实上证科创板芯片ETF发起联接C": {
+      "peak": 2.208,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 1280.7245,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "易方达中证1000量化增强C": {
+      "peak": 1.4956,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 630.0385,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "永赢医药创新智选混合发起C": {
+      "peak": 1.4104999999999999,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 7815.7664,
+      "rebalanced": "2026-11-10",
+      "pos": 1.0
+    },
+    "广发中证全指家用电器ETF联接C": {
+      "peak": 1.2852000000000001,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-06",
+      "shares": 20491.956,
+      "pos": 1.0,
+      "rebalanced": "2026-11-10"
+    }
+  },
+  "plan_date": "2026-11-10"
+}
