@@ -2,3 +2,6 @@ pandas
 numpy
 openpyxl
 requests
+scipy
+matplotlib
+seaborn
