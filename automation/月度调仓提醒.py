@@ -48,8 +48,18 @@ def main():
     # 数据是否已覆盖上月末
     last_auto = sorted([f for f in os.listdir(base_dir) if f.startswith('每日基金净值_自动_') and f.endswith('.xlsx')])
     if not last_auto:
-        log('未找到自动数据文件，等待数据抓取后再提醒')
-        return
+        # Actions 环境无历史自动文件，先抓取一次
+        log('未找到自动数据文件，先执行基金数据获取')
+        r = subprocess.run([sys.executable, '基金数据获取.py'], capture_output=True, text=True,
+                           encoding='utf-8', errors='ignore')
+        if r.returncode != 0:
+            log(f'基金数据获取.py 执行失败：{(r.stdout or "")[-200:]} {(r.stderr or "")[-300:]}')
+            _push_fail('基金数据获取.py')
+            return
+        last_auto = sorted([f for f in os.listdir(base_dir) if f.startswith('每日基金净值_自动_') and f.endswith('.xlsx')])
+        if not last_auto:
+            log('基金数据获取后仍无自动数据文件，退出')
+            return
     df = pd.read_excel(last_auto[-1], sheet_name='区间回报', index_col=0)
     df = df[~df.index.astype(str).str.contains('数据来源')]
     df.index = pd.to_datetime(df.index, errors='coerce')
