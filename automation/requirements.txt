@@ -1,6 +1,7 @@
 pandas
 numpy
 openpyxl
+python-calamine
 requests
 scipy
 matplotlib
