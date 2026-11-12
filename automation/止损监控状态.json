@@ -5,7 +5,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 10.65291873514348,
+      "shares": 1115.0901,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -14,7 +14,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 32215.529087261795,
+      "shares": 31728.0592,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -23,7 +23,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 33166.38757421908,
+      "shares": 33138.6542,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -32,7 +32,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 2460.605675679892,
+      "shares": 5557.0083,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -41,7 +41,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 1245.2388070395823,
+      "shares": 1298.1495,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -50,7 +50,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 2125.2481167879155,
+      "shares": 11222.2125,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -59,7 +59,7 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 7556.192344793411,
+      "shares": 12191.6284,
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
@@ -68,10 +68,10 @@
       "on": true,
       "last_off": null,
       "since": "2026-11-06",
-      "shares": 19362.558165039638,
+      "shares": 0.0,
       "pos": 1.0,
       "rebalanced": "2026-11-11"
     }
   },
-  "plan_date": "2026-11-10"
+  "plan_date": "2026-11-11"
 }
