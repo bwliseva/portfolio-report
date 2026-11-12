@@ -38,7 +38,8 @@ TEMPLATE = '报告模板.html'
 DASH = '—'
 COOLDOWN = 10
 BOND = '华泰保兴安悦债券C'      # 债券基金：回撤 ≥3% 清仓转现金
-HALF_DD, FULL_DD, BOND_DD = 0.10, 0.15, 0.03
+BOND_DD = 0.03
+LEVELS = [(0.10, 0.70), (0.18, 0.40), (0.25, 0.00)]   # 权益阶梯减仓：(回撤阈值, 目标仓位)
 
 # 资产池 → 大类（顺序与报告附录 E 一致）
 CATEGORY_GROUPS = [
@@ -242,7 +243,7 @@ else:
     stop_m = stop_rows_m.iloc[0].to_dict() if len(stop_rows_m) else None
     cd20_m = cd20_rows.iloc[0].to_dict() if len(cd20_rows) else None
     if stop_m is None:
-        print('[警告] 未找到「分批止损 10%/15% + 冷静 10 日」行，第 3 章指标留空')
+        print('[警告] 未找到「阶梯止损 10%/18%/25% + 冷静 10 日」行，第 3 章指标留空')
 
 bt = read_sheet(STOP, '每日明细_冷静10日')
 bt_start = bt_days = None
@@ -327,21 +328,23 @@ for c in sorted(w_mv, key=lambda x: -w_mv[x]):
         peak = p
     dd = p / float(peak) - 1
     st_pos = float(st.get('pos', 1.0 if st.get('on', True) else 0.0))
-    stop_thr = BOND_DD if c == BOND else FULL_DD
-    status, action = '持有', DASH
-    if st_pos >= 1:
-        if dd <= -stop_thr:
-            if c == BOND:
-                action = '⚠ 止损清仓 → 转现金'
-                flags.append((c, '清仓', dd))
-            else:
-                action = '⚠ 止损清仓 → 转债券'
-                flags.append((c, '清仓', dd))
-        elif c != BOND and dd <= -HALF_DD:
-            action = '⚠ 减半仓 → 转债券'
-            flags.append((c, '减半仓', dd))
+    status = '持有' if st_pos >= 1 else (f'{st_pos:.0%}仓' if st_pos > 0 else '已止损')
+    action = DASH
+    want = 1.0
+    if c == BOND:
+        want = 0.0 if dd <= -BOND_DD else 1.0
     else:
-        status = '半仓' if st_pos > 0 else '已止损'
+        for thr, frac in LEVELS:
+            if dd <= -thr + 1e-12:
+                want = min(want, frac)
+    if st_pos > want + 1e-9:
+        if want <= 1e-9:
+            action = '⚠ 止损清仓 → 转现金' if c == BOND else '⚠ 止损清仓 → 转债券'
+            flags.append((c, '清仓', dd))
+        else:
+            action = f'⚠ 减至 {want:.0%} → 转债券'
+            flags.append((c, f'减至{want:.0%}', dd))
+    elif st_pos < 1:
         s = prices[c].dropna()
         pos = prices.index.get_loc(s.index[-1])
         off_i = None
@@ -387,14 +390,14 @@ if today_actions:
         except (TypeError, ValueError):
             parts.append(f'{c}（{ev}）')
     action_title = f'今日动作：触发 {len(today_actions)} 项'
-    action_note = ('；'.join(parts) + '。触发后请按第 3 章规则处理：权益回撤 ≥10% 减半仓、≥15% 清仓'
+    action_note = ('；'.join(parts) + '。触发后请按第 3 章规则处理：权益回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓'
                    '（资金转入债券，债券已清仓则转现金）；债券 ≥3% 清仓（资金转现金）→ '
                    '冷静 10 个交易日 → 双条件满足才回补。')
 else:
     action_title = '今日动作：无'
-    action_note = ('全部持仓未触发止损线（权益 10% 减半 / 15% 清仓，债券 3% 清仓），'
+    action_note = ('全部持仓未触发止损线（权益 10%/18%/25% 阶梯减至 70%/40%/清仓，债券 3% 清仓），'
                    '也没有处于冷静期或满足回补条件的基金。'
-                   '触发后请按第 3 章规则处理：权益 ≥10% 减半、≥15% 清仓（资金转入债券，'
+                   '触发后请按第 3 章规则处理：权益 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金转入债券，'
                    '债券已清仓则转现金）；债券 ≥3% 清仓转现金 → 冷静 10 个交易日 → '
                    '双条件满足才回补。')
 
@@ -520,7 +523,7 @@ def stop_row(name, m, strong=False, neg_dd=False):
 
 stop_rows = [
     stop_row('无止损', base_m, neg_dd=True),
-    stop_row('分批止损 10%/15% + 冷静 10 日', stop_m, strong=True),
+    stop_row('阶梯止损 10%/18%/25% + 冷静 10 日', stop_m, strong=True),
 ]
 
 category_rows = []
@@ -940,7 +943,7 @@ print(f'数据截止 {asof_s}｜权重 {mv_count}/{total}（MV）{rp_count}/{tot
 print(f'年化 {fp(mv_ann)}｜波动 {fp(mv_vol)}｜夏普 {fn(mv_sharpe, 3)}｜近一年回撤 {fp(mv_dd)}'
       f'｜RP 年化 {fp(rp_ann)}｜夏普 {fn(rp_sharpe, 3)}｜回撤 {fp(rp_dd)}')
 print(f'止损回测：无止损 {fp(base_ret, sign=True)} / 回撤 {fp(base_dd)}；'
-      f'分批止损 10%/15%（冷静 10 日）{fp(stop_ret, sign=True)} / 回撤 {fp(stop_dd)}')
+      f'阶梯止损 10%/18%/25%（冷静 10 日）{fp(stop_ret, sign=True)} / 回撤 {fp(stop_dd)}')
 if capital:
     print(f'监控总资产 {capital:,.2f} 元（持仓配置.json，基准 {base_dt.strftime("%Y-%m-%d")}，'
           f'现金 {cash:,.2f} 元）')
