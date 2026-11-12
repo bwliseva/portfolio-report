@@ -154,11 +154,19 @@ if os.path.exists(STATE_FILE):
 funds = state.setdefault('funds', {})
 
 # 跨月连续跟踪：月度调仓只更换权重，不清空高点；仅当基金被调出组合（清仓）时才移除状态
-removed = [c for c in list(funds) if c not in set(W.index)]
+# 调出组合但仍持有的基金：权重记 0 继续监控；只有份额为 0 才真正移除
+held_not_in_w = [c for c in list(funds)
+                 if c not in set(W.index) and float(funds[c].get('shares', 0) or 0) > 0]
+for c in held_not_in_w:
+    W[c] = 0.0
+removed = [c for c in list(funds)
+           if c not in set(W.index) and float(funds[c].get('shares', 0) or 0) <= 0]
 for c in removed:
     funds.pop(c)
 if removed:
     print(f'调仓剔除（已清仓，停止跟踪）：{"、".join(removed)}')
+if held_not_in_w:
+    print(f'调出组合但仍持有（权重 0，继续监控）：{"、".join(held_not_in_w)}')
 
 # 监控起点：本轮建仓日（以最新净值日为起点）；之后跨月连续跟踪，不再重置
 ANCHOR = last_date
