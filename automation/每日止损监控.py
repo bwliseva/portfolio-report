@@ -73,7 +73,14 @@ except Exception:
 # ---------- 2b. 单位净值与资金口径 ----------
 CFG_FILE = os.path.join(base_dir, '持仓配置.json')
 CAPITAL = 0.0
-if os.path.exists(CFG_FILE):
+# 优先读环境变量（GitHub Actions Secret TOTAL_ASSET 注入），其次读本地配置
+_env_capital = os.environ.get('TOTAL_ASSET', '').strip()
+if _env_capital:
+    try:
+        CAPITAL = float(_env_capital)
+    except ValueError:
+        pass
+if CAPITAL == 0.0 and os.path.exists(CFG_FILE):
     try:
         with open(CFG_FILE, 'r', encoding='utf-8') as f:
             CAPITAL = float(json.load(f).get('总资产', 0) or 0)
