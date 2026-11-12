@@ -33,6 +33,7 @@ jobs:
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          TOTAL_ASSET: ${{ secrets.TOTAL_ASSET }}
           TZ: Asia/Shanghai
         run: python 每日止损监控.py
 
