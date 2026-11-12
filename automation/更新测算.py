@@ -45,21 +45,17 @@ def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
         return 1e10
     return -(port_ret - risk_free) / port_vol
 
-def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3,
-                                fund_names=None, min_weights=None):
+def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3):
     """最大夏普：凸化精确求解（n_starts 仅为兼容旧调用保留，内部不再用随机起点）。
 
     令 y = w / (mu·w - rf)，则 max (mu·w-rf)/sqrt(w'Σw) 等价于凸二次规划：
         min y'Σy   s.t. (mu-rf)'y = 1, y >= 0, y_i <= max_weight * sum(y)
     凸问题的局部最优即全局最优，因此 w = y / sum(y) 为精确解。
-
-    min_weights: dict {fund_name: min_weight}，强制这些基金的权重 >= min_weight。
     """
     mu = np.asarray(mean_ret, dtype=float)
     cov = np.asarray(cov_matrix, dtype=float)
     n = len(mu)
     ex = mu - 0.02
-    min_weights = min_weights or {}
 
     def sharpe(w):
         return (w @ mu - 0.02) / np.sqrt(w @ cov @ w)
@@ -75,21 +71,10 @@ def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.
 
     y0 = np.clip(ex, 0, None)
     y0 = y0 / (ex @ y0)
-    constraints_list = [
-        {'type': 'eq', 'fun': lambda y: ex @ y - 1},
-        {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y},
-    ]
-    # 强制权重下限：y_i >= min_w * sum(y)，即 y_i - min_w * sum(y) >= 0
-    if fund_names is not None:
-        for fname, min_w in min_weights.items():
-            if fname in fund_names:
-                idx = fund_names.index(fname)
-                constraints_list.append({
-                    'type': 'ineq',
-                    'fun': lambda y, i=idx, m=min_w: y[i] - m * np.sum(y),
-                })
+    constraints = ({'type': 'eq', 'fun': lambda y: ex @ y - 1},
+                   {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y})
     res = minimize(lambda y: y @ cov @ y, y0, method='SLSQP',
-                   bounds=[(0, None)] * n, constraints=tuple(constraints_list),
+                   bounds=[(0, None)] * n, constraints=constraints,
                    options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
     if not res.success or np.sum(res.x) <= 0:
         return None, -np.inf
@@ -190,22 +175,10 @@ cov_matrix = cov_1y.loc[common_cols, common_cols]
 epsilon = 1e-6
 cov_matrix_reg = cov_matrix + np.eye(cov_matrix.shape[0]) * epsilon
 
-# 12 月起强制 008143（工银黄金）≥ 0.5%，完成 004253 → 008143 平移替换
-from datetime import datetime as _dt
-_min_weights = {}
-if _dt.now().strftime('%Y-%m') >= '2026-12':
-    _min_weights = {'工银黄金ETF联接C': 0.005}
-    if '工银黄金ETF联接C' in common_cols:
-        print('12 月黄金替换：强制 工银黄金ETF联接C 权重 ≥ 0.5%')
-
-opt_weights, max_sharpe = optimize_sharpe_multistart(
-    mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3,
-    fund_names=list(common_cols), min_weights=_min_weights)
+opt_weights, max_sharpe = optimize_sharpe_multistart(mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3)
 if opt_weights is None:
     print("30%上限无解，放宽至100%")
-    opt_weights, max_sharpe = optimize_sharpe_multistart(
-        mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0,
-        fund_names=list(common_cols), min_weights=_min_weights)
+    opt_weights, max_sharpe = optimize_sharpe_multistart(mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0)
     if opt_weights is None:
         raise RuntimeError("优化失败")
 weights_series = pd.Series(opt_weights, index=common_cols, dtype=float)
