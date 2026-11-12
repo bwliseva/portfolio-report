@@ -105,6 +105,42 @@ def nav_at(c, d):
     s = s[s.index <= pd.Timestamp(d)]
     return float(s.iloc[-1]) if len(s) else np.nan
 
+
+def nav_prev(c, d):
+    """d 之前最近一个交易日的单位净值（用于日涨跌/日收益）"""
+    if NAV is None or c not in NAV.columns:
+        return np.nan
+    s = NAV[c].dropna()
+    s = s[s.index < pd.Timestamp(d)]
+    return float(s.iloc[-1]) if len(s) else np.nan
+
+
+def nav_month_start(c, d):
+    """上月最后一个交易日的单位净值（用于本月涨跌/本月收益）"""
+    if NAV is None or c not in NAV.columns:
+        return np.nan
+    s = NAV[c].dropna()
+    month_start = pd.Timestamp(d).replace(day=1)
+    s = s[s.index < month_start]
+    return float(s.iloc[-1]) if len(s) else np.nan
+
+
+def peak_date(c):
+    """自监控起点以来净值指数最高点出现的日期（回测口径）"""
+    if c not in prices.columns:
+        return '—'
+    st = funds.get(c, {})
+    since_str = st.get('since')
+    try:
+        since = pd.Timestamp(since_str) if since_str else prices.index[0]
+    except Exception:
+        since = prices.index[0]
+    s = prices[c].dropna()
+    s = s[s.index >= since]
+    if not len(s):
+        return '—'
+    return str(s.idxmax().date())
+
 print(f'数据文件：{os.path.basename(file_path)}    最新净值日：{last_date.date()}')
 print(f'本月配置权重（来源：投资组合分析明细.xlsx，计划数据截止 {plan_end}）')
 print('高点口径：自“监控起点”至今的最高净值，跨月连续跟踪，仅清仓后才重置')
@@ -266,6 +302,7 @@ try:
     push_table_card = importlib.import_module('推送').push_table_card
 
     table_rows, total_amt = [], 0.0
+    total_day_pnl, total_month_pnl = 0.0, 0.0   # 用于合计行的日收益/本月收益
     sell_amt = 0.0                     # 权益类卖出所得（决定债券行的买入份额）
     for _, r in res.iterrows():
         c = r['基金']
@@ -286,14 +323,30 @@ try:
             sell_amt += -dq_amt
         if pd.notna(amt):
             total_amt += amt
+        # 日涨跌 / 日收益 / 本月涨跌 / 本月收益（按文档第十八节口径）
+        nav_yest = nav_prev(c, last_date)
+        nav_ms = nav_month_start(c, last_date)
+        day_chg = (nav / nav_yest - 1) if (pd.notna(nav) and pd.notna(nav_yest) and nav_yest > 0) else np.nan
+        day_pnl = sh * (nav - nav_yest) if (pd.notna(sh) and pd.notna(nav) and pd.notna(nav_yest)) else np.nan
+        month_chg = (nav / nav_ms - 1) if (pd.notna(nav) and pd.notna(nav_ms) and nav_ms > 0) else np.nan
+        month_pnl = sh * (nav - nav_ms) if (pd.notna(sh) and pd.notna(nav) and pd.notna(nav_ms)) else np.nan
+        if pd.notna(day_pnl):
+            total_day_pnl += day_pnl
+        if pd.notna(month_pnl):
+            total_month_pnl += month_pnl
         table_rows.append({
             'fund': c,
             'nav': f'{nav:.4f}' if pd.notna(nav) else '—',
+            'day_chg': f'{day_chg:+.2%}' if pd.notna(day_chg) else '—',
+            'day_pnl': f'{day_pnl:+,.2f}' if pd.notna(day_pnl) else '—',
+            'month_chg': f'{month_chg:+.2%}' if pd.notna(month_chg) else '—',
+            'month_pnl': f'{month_pnl:+,.2f}' if pd.notna(month_pnl) else '—',
             'shares': f'{sh:.2f}' if pd.notna(sh) else '—',
             'amount': f'{amt:,.2f}' if pd.notna(amt) else '—',
             'dshares': f'{dq_sh:+,.2f}' if abs(dq_sh) > 1e-9 else '—',
             'damount': f'{dq_amt:+,.2f}' if abs(dq_amt) > 1e-9 else '—',
             'dd': r['自高点回撤'],
+            'peak_date': peak_date(c),
         })
 
     # 止损资金转入债券：在债券行体现买入份额；债券自身已清仓则转现金（不买债券）
@@ -324,17 +377,27 @@ try:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
 
-    # 合计行：持仓金额合计 + 调仓金额净额
+    # 合计行：持仓金额合计 + 调仓金额净额 + 日/月收益与涨跌幅（按收益 ÷ 期初市值）
     net_dq = 0.0
     for x in table_rows:
         if x['damount'] != '—':
             net_dq += float(x['damount'].replace(',', ''))
+    prev_total_amt = total_amt - total_day_pnl          # 昨日总市值
+    month_start_total_amt = total_amt - total_month_pnl # 上月末总市值
+    total_day_chg = total_day_pnl / prev_total_amt if prev_total_amt > 0 else np.nan
+    total_month_chg = total_month_pnl / month_start_total_amt if month_start_total_amt > 0 else np.nan
     table_rows.append({
-        'fund': '合计', 'nav': '—', 'shares': '—',
+        'fund': '合计', 'nav': '—',
+        'day_chg': f'{total_day_chg:+.2%}' if pd.notna(total_day_chg) else '—',
+        'day_pnl': f'{total_day_pnl:+,.2f}',
+        'month_chg': f'{total_month_chg:+.2%}' if pd.notna(total_month_chg) else '—',
+        'month_pnl': f'{total_month_pnl:+,.2f}',
+        'shares': '—',
         'amount': f'{total_amt:,.2f}',
         'dshares': '—',
         'damount': f'{net_dq:+,.2f}' if abs(net_dq) > 1e-9 else '—',
         'dd': '—',
+        'peak_date': '—',
     })
 
     if actions:
@@ -357,9 +420,11 @@ try:
         f'组合止损监控 · {last_date.date()}',
         intro=intro,
         columns=[('fund', '基金', 'auto'), ('nav', '净值', 'auto'),
+                 ('day_chg', '日涨跌', 'auto'), ('day_pnl', '日收益', 'auto'),
+                 ('month_chg', '本月涨跌', 'auto'), ('month_pnl', '本月收益', 'auto'),
                  ('shares', '份额', 'auto'), ('amount', '持仓金额', 'auto'),
                  ('dshares', '调仓份额', 'auto'), ('damount', '调仓金额', 'auto'),
-                 ('dd', '回撤', 'auto')],
+                 ('dd', '回撤', 'auto'), ('peak_date', '最高点日期', 'auto')],
         rows=table_rows,
         footer=footer,
         template='red' if actions else 'green',
