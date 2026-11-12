@@ -28,6 +28,8 @@ df_raw = df_raw[df_raw.index.notna()]
 df_raw.sort_index(inplace=True)
 df_raw = df_raw.dropna(axis=1, how='all')
 df_raw = df_raw.apply(pd.to_numeric, errors='coerce')
+# 004253 仅用于止损监控，不进 MV/RP 优化池（12 月起由 008143 替换）
+df_raw = df_raw.drop(columns=['国泰黄金ETF联接C'], errors='ignore')
 df_raw = df_raw.ffill().dropna()
 df_cum = df_raw / 100.0
 
