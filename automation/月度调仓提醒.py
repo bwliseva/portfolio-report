@@ -106,8 +106,15 @@ def main():
 
     # ---------- 资金口径与份额台账 ----------
     capital = 0.0
+    # 优先读环境变量（GitHub Actions Secret TOTAL_ASSET 注入），其次读本地配置
+    _env_capital = os.environ.get('TOTAL_ASSET', '').strip()
+    if _env_capital:
+        try:
+            capital = float(_env_capital)
+        except ValueError:
+            pass
     cfg_path = os.path.join(base_dir, '持仓配置.json')
-    if os.path.exists(cfg_path):
+    if capital == 0.0 and os.path.exists(cfg_path):
         with open(cfg_path, encoding='utf-8') as f:
             capital = float(json.load(f).get('总资产', 0) or 0)
 
