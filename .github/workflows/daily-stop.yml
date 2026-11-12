@@ -2,7 +2,8 @@ name: 每日止损推送
 
 on:
   schedule:
-    - cron: '0 14 * * *'   # UTC 14:00 = 北京时间 22:00
+    - cron: '7 14 * * *'    # UTC 14:07 = 北京 22:07（避开整点高负载，整点任务易被延迟或丢弃）
+    - cron: '37 14 * * *'   # UTC 14:37 = 北京 22:37（兜底；当天已推送则自动跳过）
   workflow_dispatch:
 
 permissions:
@@ -28,7 +29,22 @@ jobs:
       - name: 安装依赖
         run: pip install --quiet -r automation/requirements.txt
 
+      - name: 检查今日是否已推送
+        id: check
+        run: |
+          TODAY=$(TZ=Asia/Shanghai date +%F)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "手动触发，强制执行"
+          elif [ -f automation/last_push_date.txt ] && [ "$(cat automation/last_push_date.txt)" = "$TODAY" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "今日（$TODAY）已推送，跳过本次兜底触发"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: 运行每日止损监控
+        if: steps.check.outputs.skip != 'true'
         working-directory: automation
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
@@ -36,6 +52,10 @@ jobs:
           TOTAL_ASSET: ${{ secrets.TOTAL_ASSET }}
           TZ: Asia/Shanghai
         run: python 每日止损监控.py
+
+      - name: 记录推送日期
+        if: steps.check.outputs.skip != 'true'
+        run: TZ=Asia/Shanghai date +%F > automation/last_push_date.txt
 
       - name: 回写状态与心跳
         if: always()
@@ -45,6 +65,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add automation/止损监控状态.json automation/last_run.txt
+          if [ -f automation/last_push_date.txt ]; then git add automation/last_push_date.txt; fi
           if [ -f automation/止损监控日志.csv ]; then git add automation/止损监控日志.csv; fi
           if ! git diff --cached --quiet; then
             git commit -m "chore: 更新止损状态 $(TZ=Asia/Shanghai date +%F)"
