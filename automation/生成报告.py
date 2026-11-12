@@ -3,7 +3,7 @@
 
 输入：
   投资组合分析明细.xlsx        （更新测算.py 产出：权重 / 指标 / 回测 / 回撤）
-  单基金止损回测结果.xlsx      （止损回测.py 产出：指标对比_冷静期 / 每日明细_冷静10日）
+  单基金止损回测结果.xlsx      （止损回测.py 产出：指标对比_冷静期 / 每日明细_冷静20日）
   止损监控状态.json / 止损监控日志.csv / 持仓配置.json
   每日基金净值_自动_*.xlsx     （最新一个，取“区间回报”还原净值指数）
 模板：
@@ -36,7 +36,7 @@ LOG = '止损监控日志.csv'
 CFG = '持仓配置.json'
 TEMPLATE = '报告模板.html'
 DASH = '—'
-COOLDOWN = 10
+COOLDOWN = 20
 BOND = '华泰保兴安悦债券C'      # 债券基金：回撤 ≥3% 清仓转现金
 BOND_DD = 0.03
 LEVELS = [(0.10, 0.70), (0.18, 0.40), (0.25, 0.00)]   # 权益阶梯减仓：(回撤阈值, 目标仓位)
@@ -237,15 +237,15 @@ if sc is None:
 else:
     labels = sc.iloc[:, 0].astype(str)
     base_rows = sc[labels.str.strip() == '无止损']
-    stop_rows_m = sc[labels.str.contains('冷静 10', na=False) | labels.str.contains('冷静10', na=False)]
-    cd20_rows = sc[labels.str.contains('冷静 20', na=False) | labels.str.contains('冷静20', na=False)]
+    stop_rows_m = sc[labels.str.contains('冷静 20', na=False) | labels.str.contains('冷静20', na=False)]
+    cmp_rows = sc[labels.str.contains('冷静 30', na=False) | labels.str.contains('冷静30', na=False)]
     base_m = base_rows.iloc[0].to_dict() if len(base_rows) else None
     stop_m = stop_rows_m.iloc[0].to_dict() if len(stop_rows_m) else None
-    cd20_m = cd20_rows.iloc[0].to_dict() if len(cd20_rows) else None
+    cmp_m = cmp_rows.iloc[0].to_dict() if len(cmp_rows) else None
     if stop_m is None:
-        print('[警告] 未找到「阶梯止损 10%/18%/25% + 冷静 10 日」行，第 3 章指标留空')
+        print('[警告] 未找到「阶梯止损 10%/18%/25% + 冷静 20 日」行，第 3 章指标留空')
 
-bt = read_sheet(STOP, '每日明细_冷静10日')
+bt = read_sheet(STOP, '每日明细_冷静20日')
 bt_start = bt_days = None
 if bt is not None and '日期' in bt.columns:
     dts = pd.to_datetime(bt['日期'], errors='coerce').dropna()
@@ -392,13 +392,13 @@ if today_actions:
     action_title = f'今日动作：触发 {len(today_actions)} 项'
     action_note = ('；'.join(parts) + '。触发后请按第 3 章规则处理：权益回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓'
                    '（资金转入债券，债券已清仓则转现金）；债券 ≥3% 清仓（资金转现金）→ '
-                   '冷静 10 个交易日 → 双条件满足才回补。')
+                   '冷静 20 个交易日 → 双条件满足才回补。')
 else:
     action_title = '今日动作：无'
     action_note = ('全部持仓未触发止损线（权益 10%/18%/25% 阶梯减至 70%/40%/清仓，债券 3% 清仓），'
                    '也没有处于冷静期或满足回补条件的基金。'
                    '触发后请按第 3 章规则处理：权益 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金转入债券，'
-                   '债券已清仓则转现金）；债券 ≥3% 清仓转现金 → 冷静 10 个交易日 → '
+                   '债券已清仓则转现金）；债券 ≥3% 清仓转现金 → 冷静 20 个交易日 → '
                    '双条件满足才回补。')
 
 # ---------------------------------------------------------------- 6. 表格行
@@ -523,7 +523,7 @@ def stop_row(name, m, strong=False, neg_dd=False):
 
 stop_rows = [
     stop_row('无止损', base_m, neg_dd=True),
-    stop_row('阶梯止损 10%/18%/25% + 冷静 10 日', stop_m, strong=True),
+    stop_row('阶梯止损 10%/18%/25% + 冷静 20 日', stop_m, strong=True),
 ]
 
 category_rows = []
@@ -746,14 +746,14 @@ else:
     print('[警告] 两模型回撤对比缺失，图 4 数据为空')
     dd_js = {'dates': [], 'mv': [], 'rp': []}
 
-if bt is not None and {'日期', '无止损_累计收益', '冷静10日_累计收益'} <= set(bt.columns):
+if bt is not None and {'日期', '无止损_累计收益', '冷静20日_累计收益'} <= set(bt.columns):
     bt_s = bt.copy()
     bt_s['日期'] = pd.to_datetime(bt_s['日期'], errors='coerce')
     bt_s = bt_s.dropna(subset=['日期']).sort_values('日期')
     stop_js = {
         'dates': [d.strftime('%Y-%m-%d') for d in bt_s['日期']],
         'base': [round(float(v) * 100, 2) for v in bt_s['无止损_累计收益']],
-        'stop': [round(float(v) * 100, 2) for v in bt_s['冷静10日_累计收益']],
+        'stop': [round(float(v) * 100, 2) for v in bt_s['冷静20日_累计收益']],
     }
 else:
     print('[警告] 止损每日明细缺失，图 5 数据为空')
@@ -788,10 +788,10 @@ base_vol = num(base_m.get('年化波动')) if base_m else None
 stop_vol = num(stop_m.get('年化波动')) if stop_m else None
 base_ret = num(base_m.get('累计收益')) if base_m else None
 stop_ret = num(stop_m.get('累计收益')) if stop_m else None
-cd20_ret = num(cd20_m.get('累计收益')) if cd20_m else None
-cd20_dd = num(cd20_m.get('最大回撤')) if cd20_m else None
-cd10_n = stop_m.get('止损事件数') if stop_m else None
-cd10_whip = stop_m.get('打脸次数(≤10日回补)') if stop_m else None
+cmp_ret = num(cmp_m.get('累计收益')) if cmp_m else None
+cmp_dd = num(cmp_m.get('最大回撤')) if cmp_m else None
+main_n = stop_m.get('止损事件数') if stop_m else None
+main_whip = stop_m.get('打脸次数(≤10日回补)') if stop_m else None
 
 repl = {
     'TITLE_MONTH': as_of.strftime('%Y-%m'),
@@ -836,10 +836,12 @@ repl = {
     'NOTE_STOP_VOL': fp(stop_vol, 1),
     'NOTE_BASE_RET': fp(base_ret, 1, sign=True),
     'NOTE_STOP_RET': fp(stop_ret, 1, sign=True),
-    'CD20_RET': fp(cd20_ret, sign=True),
-    'CD20_DD': fp(cd20_dd),
-    'CD10_N': fi(cd10_n),
-    'CD10_WHIP': fi(cd10_whip),
+    'CD_MAIN_RET': fp(stop_ret, sign=True),
+    'CD_MAIN_DD': fp(stop_dd),
+    'CD_CMP_RET': fp(cmp_ret, sign=True),
+    'CD_CMP_DD': fp(cmp_dd),
+    'CD_MAIN_N': fi(main_n),
+    'CD_MAIN_WHIP': fi(main_whip),
     'CATEGORY_ROWS': block(category_rows),
     'CORR_METHOD': CORR_METHOD,
     'CORR_WINDOW': corr_window,
@@ -943,7 +945,7 @@ print(f'数据截止 {asof_s}｜权重 {mv_count}/{total}（MV）{rp_count}/{tot
 print(f'年化 {fp(mv_ann)}｜波动 {fp(mv_vol)}｜夏普 {fn(mv_sharpe, 3)}｜近一年回撤 {fp(mv_dd)}'
       f'｜RP 年化 {fp(rp_ann)}｜夏普 {fn(rp_sharpe, 3)}｜回撤 {fp(rp_dd)}')
 print(f'止损回测：无止损 {fp(base_ret, sign=True)} / 回撤 {fp(base_dd)}；'
-      f'阶梯止损 10%/18%/25%（冷静 10 日）{fp(stop_ret, sign=True)} / 回撤 {fp(stop_dd)}')
+      f'阶梯止损 10%/18%/25%（冷静 20 日）{fp(stop_ret, sign=True)} / 回撤 {fp(stop_dd)}')
 if capital:
     print(f'监控总资产 {capital:,.2f} 元（持仓配置.json，基准 {base_dt.strftime("%Y-%m-%d")}，'
           f'现金 {cash:,.2f} 元）')
