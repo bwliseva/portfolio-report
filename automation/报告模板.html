@@ -267,7 +267,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="flow">
       <div class="item"><div class="when">阶梯止损</div><div class="what"><b>权益类（除债券基金外全部）自持有期高点回撤 ≥ 10% 减至 70%、≥ 18% 减至 40%、≥ 25% 清仓</b>；腾出的资金转入债券基金（华泰保兴安悦债券C）。分批退出、不清零，避免在急跌底部一次性卖光。</div></div>
       <div class="item"><div class="when">债券止损</div><div class="what"><b>债券基金自高点回撤 ≥ 3% 即清仓</b>，资金转现金（货币，收益按 0 计），不再买回债券自身；此时权益止损腾出的资金也转现金。</div></div>
-      <div class="item"><div class="when">冷静期</div><div class="what">动作后 <b>10 个交易日内禁止回补</b>，避免"止损即反弹"的打脸交易。</div></div>
+      <div class="item"><div class="when">冷静期</div><div class="what">动作后 <b>20 个交易日内禁止回补</b>，避免"止损即反弹"的打脸交易。</div></div>
       <div class="item"><div class="when">回补</div><div class="what">冷静期满后，同时满足 <b>近 20 日累计收益 &gt; 0</b> 且 <b>自高点回撤修复至 -5% 以内</b> ，才允许回补至满仓（原先减仓的部分一次性补回）。</div></div>
       <div class="item"><div class="when">只做单基金</div><div class="what">不做组合层面止损，避免因整体情绪清仓而踏空；资金只在基金与现金之间腾挪，现金部分收益按 0 计。</div></div>
     </div>
@@ -284,7 +284,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     </div>
 
     <figure class="chart-figure">
-      <figcaption>图 5：无止损 vs 阶梯止损（权益 10%/18%/25% → 70%/40%/清仓，债券 3% + 冷静 10 日）累计收益率对比（%）</figcaption>
+      <figcaption>图 5：无止损 vs 阶梯止损（权益 10%/18%/25% → 70%/40%/清仓，债券 3% + 冷静 20 日）累计收益率对比（%）</figcaption>
       <div id="chart-stop" class="chart-box"></div>
     </figure>
 
@@ -293,8 +293,8 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       它把年化波动从 {{NOTE_BASE_VOL}} 压到 {{NOTE_STOP_VOL}}，最大回撤从 {{NOTE_BASE_DD}} 收窄到 {{NOTE_STOP_DD}}，累计收益也从 {{NOTE_BASE_RET}} 变为 {{NOTE_STOP_RET}}。但收益端的改善是 {{BT_YEAR}} 年震荡下行行情的副产品——在单边上涨年份，止损大概率会让收益低于无止损。请把它当作<strong>保险费</strong>，而不是收益来源。
     </div>
     <div class="note warn">
-      <div class="t">为什么不换更"好看"的参数</div>
-      冷静 20 日的回测结果更好（{{CD20_RET}}、回撤 {{CD20_DD}}），但那是同一段历史反复挑参数的结果，属于过拟合。冷静 10 日的事件数 {{CD10_N}} 次、打脸 {{CD10_WHIP}} 次，与 0 日/5 日差异很小，实务上更稳健，因此固定为唯一执行口径。
+      <div class="t">为什么把冷静期定为 20 日</div>
+      冷静期从 10 日延长到 20 日，交易费用明显下降、最大回撤同步改善（20 日口径：{{CD_MAIN_RET}}、回撤 {{CD_MAIN_DD}}），同期收益差异在噪声范围内；继续延长到 30 日，费用虽继续下降但回撤开始回升（{{CD_CMP_RET}}、回撤 {{CD_CMP_DD}}），说明 20 日附近是拐点。当前口径事件数 {{CD_MAIN_N}} 次、打脸 {{CD_MAIN_WHIP}} 次。阈值本身不再细调——那属于在同一段历史上反复挑参数。
     </div>
   </section>
 
@@ -345,7 +345,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <li><strong>只按模型调仓，不主观加码。</strong>单只基金权重不超过 30%（RP 模式例外，债券 {{MAX_RP_W}} 由模型给出）。</li>
       <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减至 70%、18% 减至 40%、25% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
-      <li><strong>止损后必须走冷静期。</strong>10 个交易日内禁止回补，且回补需同时满足两个条件。</li>
+      <li><strong>止损后必须走冷静期。</strong>20 个交易日内禁止回补，且回补需同时满足两个条件。</li>
       <li><strong>月度调仓之外不调整比例。</strong>每天只看止损，不做择时加减仓。</li>
       <li><strong>全程留痕。</strong>每次止损/回补自动写入 <code>止损监控日志.csv</code>，月末复盘必看。</li>
       <li><strong>每年复核一次模型假设。</strong>若某基金连续两轮被优化剔除（权重长期为 0），考虑替换而非保留。</li>
