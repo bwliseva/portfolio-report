@@ -265,10 +265,10 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
 
     <h3>3.1 规则（已固化为脚本）</h3>
     <div class="flow">
-      <div class="item"><div class="when">分批止损</div><div class="what"><b>权益类（除债券基金外全部）自持有期高点回撤 ≥ 10% 减半仓、≥ 15% 清仓</b>；腾出的资金转入债券基金（华泰保兴安悦债券C）。</div></div>
+      <div class="item"><div class="when">阶梯止损</div><div class="what"><b>权益类（除债券基金外全部）自持有期高点回撤 ≥ 10% 减至 70%、≥ 18% 减至 40%、≥ 25% 清仓</b>；腾出的资金转入债券基金（华泰保兴安悦债券C）。分批退出、不清零，避免在急跌底部一次性卖光。</div></div>
       <div class="item"><div class="when">债券止损</div><div class="what"><b>债券基金自高点回撤 ≥ 3% 即清仓</b>，资金转现金（货币，收益按 0 计），不再买回债券自身；此时权益止损腾出的资金也转现金。</div></div>
       <div class="item"><div class="when">冷静期</div><div class="what">动作后 <b>10 个交易日内禁止回补</b>，避免"止损即反弹"的打脸交易。</div></div>
-      <div class="item"><div class="when">回补</div><div class="what">冷静期满后，同时满足 <b>近 20 日累计收益 &gt; 0</b> 且 <b>自高点回撤修复至 -5% 以内</b> ，才允许回补至满仓（原先减半的补回剩余一半）。</div></div>
+      <div class="item"><div class="when">回补</div><div class="what">冷静期满后，同时满足 <b>近 20 日累计收益 &gt; 0</b> 且 <b>自高点回撤修复至 -5% 以内</b> ，才允许回补至满仓（原先减仓的部分一次性补回）。</div></div>
       <div class="item"><div class="when">只做单基金</div><div class="what">不做组合层面止损，避免因整体情绪清仓而踏空；资金只在基金与现金之间腾挪，现金部分收益按 0 计。</div></div>
     </div>
 
@@ -284,7 +284,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     </div>
 
     <figure class="chart-figure">
-      <figcaption>图 5：无止损 vs 分批止损（权益 10%/15%、债券 3% + 冷静 10 日）累计收益率对比（%）</figcaption>
+      <figcaption>图 5：无止损 vs 阶梯止损（权益 10%/18%/25% → 70%/40%/清仓，债券 3% + 冷静 10 日）累计收益率对比（%）</figcaption>
       <div id="chart-stop" class="chart-box"></div>
     </figure>
 
@@ -333,7 +333,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     </ul>
     <div class="note">
       <div class="t">运行时间建议</div>
-      每个交易日 <strong>22:00</strong> 由 Windows 计划任务自动运行（无需打开 Trae 或其他程序），结果以桌面气泡提醒，同时推送一张飞书卡片到手机：无触发时表头为绿色，显示"未触发止损线"（权益 10%/15%、债券 3%）与各持仓回撤；有触发时表头变红，逐条列出基金、动作与回撤。公募基金净值大多在 19:00~21:00 才更新完毕，18:30 时仍有相当比例基金未出净值，因此把执行时点定在 22:00，确保用的是当日完整数据。当天为节假日时，脚本沿用上一交易日净值，不会误报。
+      每个交易日 <strong>22:07</strong> 由 GitHub Actions 定时运行（无需打开电脑或 Trae），结果同时推送一张飞书卡片到手机：无触发时表头为绿色，显示"未触发止损线"（权益 10%/18%/25% 阶梯减至 70%/40%/清仓、债券 3%）与各持仓回撤；有触发时表头变红，逐条列出基金、动作与回撤。公募基金净值大多在 19:00~21:00 才更新完毕，18:30 时仍有相当比例基金未出净值，因此把执行时点定在 22:07，确保用的是当日完整数据。当天为节假日时，脚本沿用上一交易日净值，不会误报。
     </div>
   </section>
 
@@ -343,7 +343,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <h3>纪律红线</h3>
     <ul>
       <li><strong>只按模型调仓，不主观加码。</strong>单只基金权重不超过 30%（RP 模式例外，债券 {{MAX_RP_W}} 由模型给出）。</li>
-      <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减半、15% 清仓，债券 3% 清仓，触发当天处理。</li>
+      <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减至 70%、18% 减至 40%、25% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
       <li><strong>止损后必须走冷静期。</strong>10 个交易日内禁止回补，且回补需同时满足两个条件。</li>
       <li><strong>月度调仓之外不调整比例。</strong>每天只看止损，不做择时加减仓。</li>
