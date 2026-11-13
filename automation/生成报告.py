@@ -471,15 +471,7 @@ other_text = '、'.join(
     for h in other_hold) or '无其他持仓'
 
 
-mv_sharpe_cls = 'pos' if (ok(mv_sharpe) and mv_sharpe > 0) else ''
 metric_rows = [
-    f'<tr><td>年化收益率</td><td class="num {"pos" if ok(mv_ann) and mv_ann > 0 else ""}">{fp(mv_ann)}</td>'
-    f'<td class="num {"pos" if ok(rp_ann) and rp_ann > 0 else ""}">{fp(rp_ann)}</td></tr>',
-    f'<tr><td>年化波动率</td><td class="num">{fp(mv_vol)}</td><td class="num">{fp(rp_vol)}</td></tr>',
-    f'<tr><td>夏普比率（无风险 2%）</td><td class="num {mv_sharpe_cls}">{fn(mv_sharpe, 3)}</td>'
-    f'<td class="num">{fn(rp_sharpe, 3)}</td></tr>',
-    f'<tr><td>近一年最大回撤</td><td class="num {"neg" if ok(mv_dd) else ""}">{fp(mv_dd)}</td>'
-    f'<td class="num {"neg" if ok(rp_dd) else ""}">{fp(rp_dd)}</td></tr>',
     f'<tr><td>持仓数量</td><td class="num">{mv_count} / {total}</td><td class="num">{rp_count} / {total}</td></tr>',
     f'<tr><td>权重集中度</td><td class="num">前 4 只合计 {top4 * 100:.1f}%</td>'
     f'<td class="num">最大 {fp(max_rp_w)}（{max_rp_label}）</td></tr>',
@@ -799,13 +791,6 @@ repl = {
     'DATA_RANGE': f'{data_start.strftime("%Y-%m-%d")} ~ {asof_s}',
     'ASOF': asof_s,
     'BT_YEAR': bt_year,
-    'KPI_MV_ANN': fp(mv_ann),
-    'KPI_MV_SHARPE': fn(mv_sharpe, 2),
-    'KPI_RP_SHARPE': fn(rp_sharpe, 2),
-    'KPI_MV_DD': fp(mv_dd),
-    'KPI_RP_DD': fp(rp_dd),
-    'KPI_STOP_TEXT': (f'{base_dd * 100:.1f}% → {stop_dd * 100:.1f}%'
-                      if ok(base_dd) and ok(stop_dd) else DASH),
     'MV_COUNT': str(mv_count),
     'ZERO_COUNT': str(total - mv_count),
     'RP_COUNT': str(rp_count),
