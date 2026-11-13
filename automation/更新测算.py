@@ -30,13 +30,15 @@ df_raw = df_raw.dropna(axis=1, how='all')
 df_raw = df_raw.apply(pd.to_numeric, errors='coerce')
 # 004253 仅用于止损监控，不进 MV/RP 优化池（12 月起由 008143 替换）
 df_raw = df_raw.drop(columns=['国泰黄金ETF联接C'], errors='ignore')
-df_raw = df_raw.ffill().dropna()
+# 逐基金保留各自起点，不再整表 dropna（否则会被最晚成立的基金截断）
+df_raw = df_raw.ffill()
+df_raw = df_raw.loc[df_raw.notna().any(axis=1)]
 df_cum = df_raw / 100.0
 
 print(f"数据日期范围：{df_cum.index.min()} 至 {df_cum.index.max()}")
 print(f"基金数量：{df_cum.shape[1]}")
 
-daily_ret = df_cum.diff().dropna()
+daily_ret = df_cum.diff().iloc[1:]
 
 def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
     port_ret = np.sum(weights * mean_ret)
@@ -110,14 +112,11 @@ try:
 except ValueError:
     monthly_last = df_cum_3y.resample('M').last()
 monthly_ret = monthly_last.diff().dropna(how='all')
-target_months = ['2024-06-30', '2024-07-31']
-for fund in monthly_ret.columns:
-    for tm in target_months:
-        if tm in monthly_ret.index and pd.isna(monthly_ret.loc[tm, fund]):
-            existing = monthly_ret[fund].dropna()
-            fill_val = existing.mean() if len(existing) > 0 else 0.0
-            monthly_ret.loc[tm, fund] = fill_val
-            print(f"基金 {fund} 在 {tm} 缺失，用均值 {fill_val:.6f} 填充")
+# 期望收益按各基金实际可得月份计算，要求至少 24 个月，避免短样本噪声
+short = [c for c in monthly_ret.columns if monthly_ret[c].count() < 24]
+if short:
+    print(f"样本不足 24 个月，不参与优化：{'、'.join(short)}")
+monthly_ret = monthly_ret.drop(columns=short, errors='ignore')
 monthly_ret = monthly_ret.dropna(how='all', axis=0).dropna(how='all', axis=1)
 
 avg_monthly_ret = monthly_ret.mean(axis=0).sort_values(ascending=False)
@@ -231,7 +230,7 @@ plt.close()
 
 full_weights = pd.Series(0.0, index=df_cum.columns)
 full_weights[weights_series.index] = weights_series.values
-port_cum_abs = df_cum @ full_weights
+port_cum_abs = (df_cum * full_weights).sum(axis=1, min_count=1)
 
 today = port_cum_abs.index.max()
 data_start = port_cum_abs.index.min()
@@ -324,7 +323,7 @@ plt.close()
 # 风险平价组合净值与回测
 rp_full_weights = pd.Series(0.0, index=df_cum.columns)
 rp_full_weights[rp_weights_series.index] = rp_weights_series.values
-rp_port_cum_abs = df_cum @ rp_full_weights
+rp_port_cum_abs = (df_cum * rp_full_weights).sum(axis=1, min_count=1)
 
 rp_sub_ytd = plot_interval_cumulative(rp_port_cum_abs, start_ytd, '风险平价 今年以来累计收益率（起点0%）', '风险平价_回测_今年以来_累计收益率.png')
 rp_sub_3m = plot_interval_cumulative(rp_port_cum_abs, start_3m, '风险平价 最近三个月累计收益率（起点0%）', '风险平价_回测_最近三个月_累计收益率.png')
