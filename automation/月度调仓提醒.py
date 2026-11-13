@@ -191,6 +191,27 @@ def main():
             'damount': f'{dq_amt:+,.2f}' if pd.notna(dq_amt) and abs(dq_amt) > 1e-9 else '—',
         })
 
+    # 持仓中但已不在目标权重（如 004253 由 008143 替换、优化结果为 0 的基金）：全部卖出
+    exit_funds = [c for c, st in funds.items()
+                  if c not in W.index and abs(float(st.get('shares', 0) or 0)) > 1e-9]
+    for c in exit_funds:
+        n_end = nav_at(c, data_end)
+        sh_old = float(funds[c].get('shares', 0) or 0)
+        amt_old = sh_old * n_end if pd.notna(n_end) else float('nan')
+        dq_amt = -amt_old if pd.notna(amt_old) else float('nan')
+        if pd.notna(amt_old):
+            held_amt += amt_old
+        new_shares[c] = 0.0
+        table_rows.append({
+            'fund': f'{c}（调出，清仓）',
+            'wt': '0.00%',
+            'nav': f'{n_end:.4f}' if pd.notna(n_end) else '—',
+            'shares': f'{sh_old:,.2f}',
+            'amount': f'{amt_old:,.2f}' if pd.notna(amt_old) else '—',
+            'dshares': f'{-sh_old:+,.2f}',
+            'damount': f'{dq_amt:+,.2f}' if pd.notna(dq_amt) and abs(dq_amt) > 1e-9 else '—',
+        })
+
     # 债券已清仓时，止损资金留作现金（收益按 0 计）
     cash_amt = freed if (capital > 0 and not bond_on) else 0.0
     if cash_amt > 1e-9:
@@ -226,6 +247,8 @@ def main():
     if stopped:
         intro += ('　止损中：' + '、'.join(f'{c}（{pos_map[c]:.0%} 仓）' for c in stopped)
                   + '，本月只按剩余仓位买入')
+    if exit_funds:
+        intro += '　调出组合需清仓：' + '、'.join(exit_funds)
     if metrics:
         intro += '\n' + metrics.replace('组合预期：', '组合预期：').replace(' / ', '　')
 
