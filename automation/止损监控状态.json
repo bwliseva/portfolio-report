@@ -71,6 +71,14 @@
       "shares": 0.0,
       "pos": 1.0,
       "rebalanced": "2026-11-11"
+    },
+    "工银黄金ETF联接C": {
+      "peak": 1.6693000000000002,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-13",
+      "pos": 1.0,
+      "shares": 0.0
     }
   },
   "plan_date": "2026-11-12"
