@@ -37,18 +37,21 @@ CFG = '持仓配置.json'
 TEMPLATE = '报告模板.html'
 DASH = '—'
 COOLDOWN = 20
-BOND = '华泰保兴安悦债券C'      # 债券基金：回撤 ≥3% 清仓转现金
+BOND = '华泰保兴安悦债券C'      # 保留：历史配置默认值
+BONDS = (BOND, '国泰中债1-3年国开债A')  # 止损资金平均分到这两只债券
 BOND_DD = 0.03
 LEVELS = [(0.10, 0.70), (0.18, 0.40), (0.25, 0.00)]   # 权益阶梯减仓：(回撤阈值, 目标仓位)
 
 # 资产池 → 大类（顺序与报告附录 E 一致）
 CATEGORY_GROUPS = [
     ('避险 / 商品', True, ['工银黄金ETF联接C']),
-    ('固收', False, ['华泰保兴安悦债券C']),
+    ('固收', False, ['华泰保兴安悦债券C', '国泰中债1-3年国开债A']),
     ('港股 / 红利', False, ['易方达恒生港股通红利低波动ETF联接发起式C']),
     ('宽基 / 量化', False, ['易方达中证1000量化增强C']),
     ('科技成长', False, ['嘉实上证科创板芯片ETF发起联接C', '华夏中证动漫游戏ETF发起式联接C',
-                        '招商中证机器人ETF发起联接C', '东方新能源汽车主题混合']),
+                        '招商中证机器人ETF发起联接C', '东方新能源汽车主题混合',
+                        '国泰中证全指通信设备ETF联接C']),
+    ('公用事业', False, ['广发电力ETF联接C']),
     ('医药消费', False, ['永赢医药创新智选混合发起C', '广发中证全指家用电器ETF联接C',
                         '招商中证白酒指数C', '华宝中证沪港深新消费指数C']),
     ('周期资源', False, ['富国中证煤炭指数C', '嘉实中证稀有金属主题ETF发起联接C',
@@ -331,7 +334,7 @@ for c in sorted(w_mv, key=lambda x: -w_mv[x]):
     status = '持有' if st_pos >= 1 else (f'{st_pos:.0%}仓' if st_pos > 0 else '已止损')
     action = DASH
     want = 1.0
-    if c == BOND:
+    if c in BONDS:
         want = 0.0 if dd <= -BOND_DD else 1.0
     else:
         for thr, frac in LEVELS:
@@ -339,10 +342,10 @@ for c in sorted(w_mv, key=lambda x: -w_mv[x]):
                 want = min(want, frac)
     if st_pos > want + 1e-9:
         if want <= 1e-9:
-            action = '⚠ 止损清仓 → 转现金' if c == BOND else '⚠ 止损清仓 → 转债券'
+            action = '⚠ 止损清仓 → 转现金' if c in BONDS else '⚠ 止损清仓 → 转两只债基各半'
             flags.append((c, '清仓', dd))
         else:
-            action = f'⚠ 减至 {want:.0%} → 转债券'
+            action = f'⚠ 减至 {want:.0%} → 转两只债基各半'
             flags.append((c, f'减至{want:.0%}', dd))
     elif st_pos < 1:
         s = prices[c].dropna()
@@ -391,14 +394,14 @@ if today_actions:
             parts.append(f'{c}（{ev}）')
     action_title = f'今日动作：触发 {len(today_actions)} 项'
     action_note = ('；'.join(parts) + '。触发后请按第 3 章规则处理：权益回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓'
-                   '（资金转入债券，债券已清仓则转现金）；债券 ≥3% 清仓（资金转现金）→ '
+                   '（资金平均转入两只债券，两只都已清仓则转现金）；债券 ≥3% 清仓（资金转现金）→ '
                    '冷静 20 个交易日 → 双条件满足才回补。')
 else:
     action_title = '今日动作：无'
     action_note = ('全部持仓未触发止损线（权益 10%/18%/25% 阶梯减至 70%/40%/清仓，债券 3% 清仓），'
                    '也没有处于冷静期或满足回补条件的基金。'
-                   '触发后请按第 3 章规则处理：权益 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金转入债券，'
-                   '债券已清仓则转现金）；债券 ≥3% 清仓转现金 → 冷静 20 个交易日 → '
+                   '触发后请按第 3 章规则处理：权益 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金平均转入两只债券，'
+                   '两只都已清仓则转现金）；债券 ≥3% 清仓转现金 → 冷静 20 个交易日 → '
                    '双条件满足才回补。')
 
 # ---------------------------------------------------------------- 6. 表格行
@@ -471,6 +474,7 @@ other_text = '、'.join(
     for h in other_hold) or '无其他持仓'
 
 
+# 事前期望值（年化收益/波动/夏普）与近一年最大回撤不再展示，只保留结构性指标
 metric_rows = [
     f'<tr><td>持仓数量</td><td class="num">{mv_count} / {total}</td><td class="num">{rp_count} / {total}</td></tr>',
     f'<tr><td>权重集中度</td><td class="num">前 4 只合计 {top4 * 100:.1f}%</td>'
@@ -712,8 +716,85 @@ def series_sheet(sheet, col=None, name=None):
     return s
 
 
-ytd_a = series_sheet('回测_今年以来_起点0')
-ytd_b = series_sheet('风险平价_回测_今年以来_起点0')
+def rolling_rp_curve(prices, start):
+    """风险平价（ERC）月度滚动权重曲线：每月首个交易日用当时可得数据重算并调回，月内固定份额。"""
+    cols = list(prices.columns)
+    sub = prices.loc[prices.index >= start, cols].ffill().bfill()
+    if len(sub) < 3:
+        return None
+
+    def target(dt):
+        model = prices.drop(columns=['国泰黄金ETF联接C'], errors='ignore')
+        hist = model.loc[model.index < dt].ffill()
+        if len(hist) < 260:
+            return None
+        dret = hist.pct_change(fill_method=None).dropna(how='all')
+        dret = dret.loc[dret.index >= hist.index[-1] - pd.DateOffset(years=1)]
+        dret = dret.dropna(axis=1)
+        dret = dret.loc[:, dret.std() > 1e-8]
+        if len(dret) < 120 or dret.shape[1] < 2:
+            return None
+        S = dret.cov().values * 252 + np.eye(dret.shape[1]) * 1e-6
+        n = len(S)
+        d = np.diag(S).copy()
+        w = 1.0 / np.sqrt(d)
+        for _ in range(5000):                 # ERC 坐标下降（Gauss-Seidel）
+            wn = w.copy()
+            for i in range(n):
+                b = float(S[i] @ wn - S[i, i] * wn[i])
+                disc = b * b + 4 * d[i] / n
+                wn[i] = (-b + np.sqrt(disc)) / (2 * d[i]) if disc > 0 else wn[i]
+            if not np.all(np.isfinite(wn)):
+                return None
+            if np.max(np.abs(wn - w)) < 1e-15:
+                w = wn
+                break
+            w = wn
+        return pd.Series(w / w.sum(), index=dret.columns)
+
+    ww = target(sub.index[0])
+    if ww is None:
+        return None
+    ww = ww.reindex(cols).fillna(0.0)
+    if ww.sum() <= 0:
+        return None
+    ww = ww / ww.sum()
+    row0 = sub.iloc[0]
+    shares = {c: ww[c] / row0[c] for c in cols}
+
+    nav, prev_month = [], None
+    for i, dt in enumerate(sub.index):
+        month = dt.to_period('M')
+        if prev_month is not None and month != prev_month:
+            t = target(dt)
+            if t is not None:
+                t = t.reindex(cols).fillna(0.0)
+                if t.sum() > 0:
+                    row = sub.iloc[i]
+                    total = sum(shares[c] * row[c] for c in cols)
+                    t = t / t.sum()
+                    shares = {c: t[c] * total / row[c] for c in cols}
+        row = sub.iloc[i]
+        nav.append(sum(shares[c] * row[c] for c in cols))
+        prev_month = month
+    s = pd.Series(nav, index=sub.index, dtype=float)
+    return s / s.iloc[0] - 1
+
+
+ytd_a = ytd_b = None
+# 图 2 与图 5 同一口径：MV/RP 均为月度滚动权重，每月首个交易日用当时可得数据重算并调回
+if prices is not None and ytd_start_dt is not None:
+    try:
+        from 止损引擎 import simulate as _simulate_roll
+        _base = _simulate_roll(prices, ytd_start_dt, stop=False)
+        if _base is not None:
+            ytd_a = _base['nav'] - 1.0
+        ytd_b = rolling_rp_curve(prices, ytd_start_dt)
+    except Exception as e:
+        print(f'[警告] 月度滚动曲线计算失败，图 2 回退固定权重口径：{e}')
+if ytd_a is None or ytd_b is None:
+    ytd_a = series_sheet('回测_今年以来_起点0')
+    ytd_b = series_sheet('风险平价_回测_今年以来_起点0')
 if ytd_a is not None and ytd_b is not None:
     j = pd.concat([ytd_a, ytd_b], axis=1, join='inner').dropna()
 else:
@@ -828,6 +909,8 @@ repl = {
     'CD_MAIN_N': fi(main_n),
     'CD_MAIN_WHIP': fi(main_whip),
     'CATEGORY_ROWS': block(category_rows),
+    'CORR_COUNT': str(len(corr_order)),
+    'FETCH_COUNT': str(len(FUND_COLS)),
     'CORR_METHOD': CORR_METHOD,
     'CORR_WINDOW': corr_window,
     'CORR_OBS': str(corr_obs) if corr_obs else DASH,
