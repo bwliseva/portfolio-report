@@ -79,7 +79,31 @@
       "since": "2026-11-13",
       "pos": 1.0,
       "shares": 0.0
+    },
+    "国泰中债1-3年国开债A": {
+      "peak": 1.0845,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-16",
+      "pos": 1.0,
+      "shares": 0.0
+    },
+    "广发电力ETF联接C": {
+      "peak": 1.1687,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-16",
+      "pos": 1.0,
+      "shares": 0.0
+    },
+    "国泰中证全指通信设备ETF联接C": {
+      "peak": 2.2683,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-16",
+      "pos": 1.0,
+      "shares": 0.0
     }
   },
-  "plan_date": "2026-11-12"
+  "plan_date": "2026-11-13"
 }
