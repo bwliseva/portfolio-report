@@ -180,7 +180,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <figcaption>图 1：双模型最优配置权重对比（单位：%）</figcaption>
       <div id="chart-weights" class="chart-box"></div>
     </figure>
-    <p class="cap">MV 中华泰保兴安悦债券C（020741）与国泰中债1-3年国开债A（009593）各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限，仍按等风险贡献求解。</p>
+    <p class="cap">MV 中华泰保兴安悦债券C（020741）与国泰中债1-3年国开债A（009593）各自上限 20%，其余单只基金上限 30%；RP 不施加上限，仍按等风险贡献求解。</p>
 
     <h3>1.2 今日止损监控（{{ASOF}}）</h3>
     <p>按 MV 目标权重监控的 {{MV_COUNT}} 只持仓。回撤基准为各基金自<strong>本轮建仓起点（{{ANCHOR_DATE}}）</strong>以来的最高净值；此后<strong>跨月连续跟踪</strong>，月度调仓只改权重、不清零高点，只有被调出组合（清仓）时才重置。</p>
@@ -328,7 +328,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
     <h3>纪律红线</h3>
     <ul>
-      <li><strong>只按模型调仓，不主观加码。</strong>MV 中 020741 与 009593 各固定 20%，其余单只基金不超过 30%；每月 1 日用最新数据重算并全量调仓（RP 不施加上述约束）。</li>
+      <li><strong>只按模型调仓，不主观加码。</strong>MV 中 020741 与 009593 各自上限 20%，其余单只基金不超过 30%；每月 1 日用最新数据重算并全量调仓（RP 不施加上述约束）。</li>
       <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减至 70%、18% 减至 40%、25% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
       <li><strong>止损后必须走冷静期。</strong>20 个交易日内禁止回补，且回补需同时满足两个条件。</li>
@@ -362,7 +362,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
           <tr><td>有效区间</td><td>{{DATA_RANGE}}；各基金按自身可得净值起点进入，不以最晚成立基金截断全表</td></tr>
           <tr><td>收益率估计</td><td>先以 1 + 累计收益率还原净值指数，再计算月末净值环比；近 3 年平均月收益 × 12 折算年化</td></tr>
           <tr><td>协方差估计</td><td>由还原后的净值指数计算日收益，近 1 年协方差 × 252 折算年化；不直接对累计收益率做差分</td></tr>
-          <tr><td>优化约束</td><td>MV 权重非负、合计为 1；020741 与 009593 各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限</td></tr>
+          <tr><td>优化约束</td><td>MV 权重非负、合计为 1；020741 与 009593 各自上限 20%，其余单只基金上限 30%；RP 不施加上限</td></tr>
           <tr><td>回测权重</td><td>每月首个交易日只用该日之前的数据重估并调仓，两次调仓之间份额固定、权重随净值漂移，无前视偏差</td></tr>
         </tbody>
       </table>
