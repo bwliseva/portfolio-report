@@ -32,13 +32,6 @@ h1 { font-size: 36px; line-height: 1.3; margin: 14px 0 16px; font-weight: 800; l
 .meta-line { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted); }
 .meta-line span::before { content: "· "; color: var(--accent2); font-weight: 700; }
 
-/* 关键指标 */
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 30px 0 0; }
-.kpi { background: var(--bg2); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 18px 16px; }
-.kpi .v { font-size: 25px; font-weight: 800; color: var(--accent); letter-spacing: -.02em; }
-.kpi .v.gold { color: var(--accent2); }
-.kpi .l { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
-
 /* TOC */
 .toc { margin: 32px 0 8px; background: var(--bg2); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 26px; }
 .toc h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
@@ -115,7 +108,6 @@ footer .sources .src-title { color: var(--ink); word-break: normal; }
 footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px; color: var(--accent); word-break: break-all; }
 
 @media (max-width: 860px) {
-  .kpis { grid-template-columns: repeat(2, 1fr); }
   .toc ol { columns: 1; }
   h1 { font-size: 29px; }
   .flow .item { grid-template-columns: 1fr; gap: 6px; }
@@ -153,7 +145,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <li><a href="#a2">附录 B · 每日止损监控说明</a></li>
       <li><a href="#a3">附录 C · 纪律红线与操作日历</a></li>
       <li><a href="#a4">附录 D · 数据与口径</a></li>
-      <li><a href="#a5">附录 E · 资产池与八大类</a></li>
+      <li><a href="#a5">附录 E · 资产池与九大类</a></li>
       <li><a href="#a6">附录 F · 脚本与文件</a></li>
     </ol>
   </nav>
@@ -164,7 +156,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
 
     <h3>1.1 本月持仓与目标配置（基准 {{BASE_DATE}} 真实持仓）</h3>
     <p>本表以 <strong>{{BASE_DATE}} 真实持仓</strong>为基准，总资产 <strong>{{TOTAL_ASSETS}} 元</strong>（含现金 {{CASH}} 元）。MV（最大夏普）选入 {{MV_COUNT}} 只，其余 {{ZERO_COUNT}} 只权重为 0；现金与 020603 未纳入模型池，权重记 0，但计入市值合计，因此 MV 权重合计为 100.00%。</p>
-    <p><strong>本月不调整持仓</strong>：只执行单基金止损监控，不按目标权重买卖；下表"调仓金额 = 目标权重 × 总资产 − 当前市值"仅作为<strong>下月 1 日重算后的参考</strong>，本月不执行。</p>
+    <p><strong>月度调仓只在每月 1 日执行</strong>：届时先抓取最新净值，再按同一规则重算并全量调仓；其余交易日只执行单基金止损监控。下表"调仓金额 = 目标权重 × 总资产 − 当前市值"为参考，实际以下月 1 日最新测算为准。</p>
     <div class="table-wrap">
       <table class="wide">
         <thead><tr><th>基金</th><th>大类</th><th class="num">MV</th><th class="num">当前市值</th><th class="num">调仓参考（下月）</th></tr></thead>
@@ -188,7 +180,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <figcaption>图 1：双模型最优配置权重对比（单位：%）</figcaption>
       <div id="chart-weights" class="chart-box"></div>
     </figure>
-    <p class="cap">MV 受 30% 单只上限约束，债券与港股红利均顶格；RP 不加上限，债券因波动最低而自然获得 {{MAX_RP_W}} 的最高权重。</p>
+    <p class="cap">MV 中华泰保兴安悦债券C（020741）与国泰中债1-3年国开债A（009593）各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限，仍按等风险贡献求解。</p>
 
     <h3>1.2 今日止损监控（{{ASOF}}）</h3>
     <p>按 MV 目标权重监控的 {{MV_COUNT}} 只持仓。回撤基准为各基金自<strong>本轮建仓起点（{{ANCHOR_DATE}}）</strong>以来的最高净值；此后<strong>跨月连续跟踪</strong>，月度调仓只改权重、不清零高点，只有被调出组合（清仓）时才重置。</p>
@@ -209,15 +201,15 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
   <section id="s2">
     <h2 class="sec"><span class="num">02</span>回测表现</h2>
     <div class="sec-rule"></div>
-    <p>回测权重在 2025-12-31 及以前的数据上估计并固定，2026 年不重新估计，以排除前视偏差。</p>
+    <p>回测每月首个交易日只使用该日之前的数据重估权重并调仓，排除前视偏差；最新一期配置同样由当期最新数据计算。</p>
 
     <figure class="chart-figure">
-      <figcaption>图 2：{{BT_YEAR}} 年以来双模型累计收益率（%，相对首日）</figcaption>
+      <figcaption>图 2：{{BT_YEAR}} 年以来双模型累计收益率（%，相对首日；MV/RP 均为月度滚动权重）</figcaption>
       <div id="chart-ytd" class="chart-box"></div>
     </figure>
 
     <figure class="chart-figure">
-      <figcaption>图 3：分区间表现（%，{{BT_YEAR}} 年内）</figcaption>
+      <figcaption>图 3：分区间表现（%，{{BT_YEAR}} 年内，固定当前权重）</figcaption>
       <div id="chart-windows" class="chart-box"></div>
     </figure>
     <div class="table-wrap">
@@ -228,6 +220,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         </tbody>
       </table>
     </div>
+    <p class="cap">区间表与图 3 均为固定当前权重口径；图 2 与图 5 为月度滚动权重口径（每月首个交易日用当时可得数据重算），两者数值不可直接对比。</p>
 
     <figure class="chart-figure">
       <figcaption>图 4：近一年回撤走势（%）</figcaption>
@@ -235,10 +228,10 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     </figure>
     <p class="cap">两模型回撤曲线高度重合，最深点均在 {{DD_MIN_MV}} ~ {{DD_MIN_RP}}，说明当前组合的风险预算主要由债券与港股红利承担。</p>
 
-    <h3>2.3 19 只基金相关系数矩阵</h3>
+    <h3>2.3 {{CORR_COUNT}} 只基金相关系数矩阵</h3>
     <p>取近一年日收益（{{CORR_WINDOW}}，共 {{CORR_OBS}} 个交易日）计算 <strong>{{CORR_METHOD}} 相关系数</strong>：全池各对基金平均 {{CORR_AVG_ALL}}，其中 {{CORR_HIGH_N}} 对高于 0.80。相关性最高的一对是 <strong>{{CORR_HIGH_PAIR}}</strong>（{{CORR_HIGH_VAL}}），最低的是 {{CORR_LOW_PAIR}}（{{CORR_LOW_VAL}}）；模型选中的 {{MV_COUNT}} 只基金两两平均仅 {{CORR_AVG_SEL}}，明显低于全池，说明优化后的组合在相关性层面确实更分散，债券与权益资产近乎不相关是主要分散来源。</p>
     <figure class="chart-figure">
-      <figcaption>图 6：19 只基金近一年日收益相关系数矩阵（{{CORR_METHOD}}）</figcaption>
+      <figcaption>图 6：{{CORR_COUNT}} 只基金近一年日收益相关系数矩阵（{{CORR_METHOD}}）</figcaption>
       <div id="chart-corr" class="chart-box"></div>
     </figure>
     <p class="cap">色阶由蓝（负相关）到红（正相关），格内显示两位小数的相关系数，悬停可看两只基金全称与精确值。<strong>{{CORR_LEGEND_NOTE}}</strong></p>
@@ -258,8 +251,8 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
 
     <h3>3.1 规则（已固化为脚本）</h3>
     <div class="flow">
-      <div class="item"><div class="when">阶梯止损</div><div class="what"><b>权益类（除债券基金外全部）自持有期高点回撤 ≥ 10% 减至 70%、≥ 18% 减至 40%、≥ 25% 清仓</b>；腾出的资金转入债券基金（华泰保兴安悦债券C）。分批退出、不清零，避免在急跌底部一次性卖光。</div></div>
-      <div class="item"><div class="when">债券止损</div><div class="what"><b>债券基金自高点回撤 ≥ 3% 即清仓</b>，资金转现金（货币，收益按 0 计），不再买回债券自身；此时权益止损腾出的资金也转现金。</div></div>
+      <div class="item"><div class="when">阶梯止损</div><div class="what"><b>权益类（除债券基金外全部）自持有期高点回撤 ≥ 10% 减至 70%、≥ 18% 减至 40%、≥ 25% 清仓</b>；腾出的资金平均转入两只债券基金（华泰保兴安悦债券C、国泰中债1-3年国开债A）各一半。分批退出、不清零，避免在急跌底部一次性卖光。</div></div>
+      <div class="item"><div class="when">债券止损</div><div class="what"><b>两只债券基金均按自高点回撤 ≥ 3% 清仓</b>，各自资金转现金（收益按 0 计）。权益止损腾出的资金平均转入仍在仓的债券；若一只已清仓，则全部转入另一只；两只都已清仓时转现金。</div></div>
       <div class="item"><div class="when">冷静期</div><div class="what">动作后 <b>20 个交易日内禁止回补</b>，避免"止损即反弹"的打脸交易。</div></div>
       <div class="item"><div class="when">回补</div><div class="what">冷静期满后，同时满足 <b>近 20 日累计收益 &gt; 0</b> 且 <b>自高点回撤修复至 -5% 以内</b> ，才允许回补至满仓（原先减仓的部分一次性补回）。</div></div>
       <div class="item"><div class="when">只做单基金</div><div class="what">不做组合层面止损，避免因整体情绪清仓而踏空；资金只在基金与现金之间腾挪，现金部分收益按 0 计。</div></div>
@@ -301,10 +294,10 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
     <p>每月 1 日 9:00 由计划任务自动执行，把"数据 → 模型 → 新权重 → 报告 → 调仓"跑成流水线。</p>
     <div class="flow">
-      <div class="item"><div class="when">第 1 步</div><div class="what"><b>python 基金数据获取.py</b><br>自动抓取 19 只基金最新净值，生成 <code>每日基金净值_自动_YYYYMMDD.xlsx</code>，并与上期数据做一致性校验（偏差应 ≤ 0.05 个百分点）。</div></div>
+      <div class="item"><div class="when">第 1 步</div><div class="what"><b>python 基金数据获取.py</b><br>自动抓取 {{FETCH_COUNT}} 只基金最新净值（含仅用于止损监控的基金），生成 <code>每日基金净值_自动_YYYYMMDD.xlsx</code>，并与上期数据做一致性校验（偏差应 ≤ 0.05 个百分点）。</div></div>
       <div class="item"><div class="when">第 2 步</div><div class="what"><b>python 更新测算.py</b><br>按"月度收益近 3 年 + 日度协方差近 1 年"重估，输出两组新权重、组合指标与三区间回测，刷新 <code>投资组合分析明细.xlsx</code> 与全部图表。</div></div>
       <div class="item"><div class="when">第 3 步</div><div class="what"><b>python 生成报告.py</b><br>读取上述 Excel 与监控状态，自动生成本月 <code>portfolio-report-YYYYMM.html</code> 及自包含单文件版，无需手工改写。</div></div>
-      <div class="item"><div class="when">第 4 步</div><div class="what"><b>按新权重调仓</b><br>以"最优配置权重"为目标，只在偏差超过 3 个百分点的基金上做买卖，避免为精确对齐产生过多交易成本。</div></div>
+      <div class="item"><div class="when">第 4 步</div><div class="what"><b>按最新数据全量调仓</b><br>以当月重新测算的"最优配置权重"为目标执行，不设换手限制；3 个百分点仅用于调仓提醒中的变动摘要，不是交易门槛。</div></div>
       <div class="item"><div class="when">第 5 步</div><div class="what"><b>止损状态跨月延续，不清零</b><br>调仓只更换权重，各基金的"持有期高点"与已止损状态继续沿用；只有被调出组合（权重归零）的基金才停止跟踪、状态清除。这样跨月的跌幅不会被"遗忘"。</div></div>
     </div>
     <div class="note">
@@ -335,7 +328,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
     <h3>纪律红线</h3>
     <ul>
-      <li><strong>只按模型调仓，不主观加码。</strong>单只基金权重不超过 30%（RP 模式例外，债券 {{MAX_RP_W}} 由模型给出）。</li>
+      <li><strong>只按模型调仓，不主观加码。</strong>MV 中 020741 与 009593 各固定 20%，其余单只基金不超过 30%；每月 1 日用最新数据重算并全量调仓（RP 不施加上述约束）。</li>
       <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减至 70%、18% 减至 40%、25% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
       <li><strong>止损后必须走冷静期。</strong>20 个交易日内禁止回补，且回补需同时满足两个条件。</li>
@@ -365,11 +358,11 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         <thead><tr><th>项目</th><th>口径</th></tr></thead>
         <tbody>
           <tr><td>数据源</td><td>东方财富基金公开接口 <code>pingzhongdata/{code}.js</code>，脚本自动抓取，落盘为 <code>每日基金净值_自动_YYYYMMDD.xlsx</code></td></tr>
-          <tr><td>净值口径</td><td>单位净值 + 分红再投（复权）计算区间累计收益率，与原有手工表逐日核对，18 只重叠基金中位偏差 ≤ 0.02 个百分点</td></tr>
-          <tr><td>有效区间</td><td>{{DATA_RANGE}}（{{RP_COUNT}} 只基金全部有净值的公共区间）</td></tr>
-          <tr><td>收益率估计</td><td>月度收益：近 3 年平均月收益 × 12 折算年化</td></tr>
-          <tr><td>协方差估计</td><td>日度收益近 1 年协方差 × 252 折算年化</td></tr>
-          <tr><td>优化约束</td><td>权重非负、合计为 1、单只基金上限 30%；RP 不加上限</td></tr>
+          <tr><td>净值口径</td><td>单位净值 + 分红再投（复权）计算区间累计收益率，与原有手工表逐日核对；重叠基金偏差在报告中单独校验</td></tr>
+          <tr><td>有效区间</td><td>{{DATA_RANGE}}；各基金按自身可得净值起点进入，不以最晚成立基金截断全表</td></tr>
+          <tr><td>收益率估计</td><td>先以 1 + 累计收益率还原净值指数，再计算月末净值环比；近 3 年平均月收益 × 12 折算年化</td></tr>
+          <tr><td>协方差估计</td><td>由还原后的净值指数计算日收益，近 1 年协方差 × 252 折算年化；不直接对累计收益率做差分</td></tr>
+          <tr><td>优化约束</td><td>MV 权重非负、合计为 1；020741 与 009593 各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限</td></tr>
           <tr><td>回测权重</td><td>每月首个交易日只用该日之前的数据重估并调仓，两次调仓之间份额固定、权重随净值漂移，无前视偏差</td></tr>
         </tbody>
       </table>
@@ -381,7 +374,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
   </section>
 
   <section class="app" id="a5">
-    <h2 class="sec"><span class="num">E</span>资产池与八大类</h2>
+    <h2 class="sec"><span class="num">E</span>资产池与九大类</h2>
     <div class="sec-rule"></div>
     <p>按"风险来源"而非"行业标签"分组，保证同一风险因子的暴露不过度集中；每类内部保留 1~4 只，用于捕捉不同市场环境下的轮动。</p>
     <div class="table-wrap">
@@ -402,7 +395,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <table>
         <thead><tr><th>文件</th><th>作用</th></tr></thead>
         <tbody>
-          <tr><td><code>基金数据获取.py</code></td><td>抓取 19 只基金每日净值，生成自动数据文件并做一致性校验</td></tr>
+          <tr><td><code>基金数据获取.py</code></td><td>抓取 {{FETCH_COUNT}} 只基金每日净值，生成自动数据文件并做一致性校验</td></tr>
           <tr><td><code>更新测算.py</code></td><td>MV + RP 双模型测算，输出权重、指标、三区间回测与图表</td></tr>
           <tr><td><code>止损回测.py</code></td><td>单基金止损规则的历史回测</td></tr>
           <tr><td><code>每日止损监控.py</code></td><td>每个交易日的持仓回撤监控与触发记录</td></tr>
@@ -419,7 +412,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sources">
       <h2>数据来源</h2>
       <ol>
-        <li id="cite-1"><span class="src-title">东方财富基金公开接口（pingzhongdata），19 只基金每日单位净值与累计净值</span><a class="src-url" href="http://fund.eastmoney.com/pingzhongdata/005064.js" target="_blank" rel="noopener">http://fund.eastmoney.com/pingzhongdata/{code}.js</a></li>
+        <li id="cite-1"><span class="src-title">东方财富基金公开接口（pingzhongdata），{{FETCH_COUNT}} 只基金每日单位净值与累计净值</span><a class="src-url" href="http://fund.eastmoney.com/pingzhongdata/005064.js" target="_blank" rel="noopener">http://fund.eastmoney.com/pingzhongdata/{code}.js</a></li>
         <li id="cite-2"><span class="src-title">本报告全部计算基于本地脚本输出的 投资组合分析明细.xlsx 与 单基金止损回测结果.xlsx</span><span class="src-url">本地文件（{{ASOF}} 数据）</span></li>
       </ol>
     </div>
