@@ -17,7 +17,8 @@ STATE_FILE = os.path.join(base_dir, '调仓提醒状态.json')
 LOG_FILE = os.path.join(base_dir, '月度提醒运行日志.txt')
 PLAN_FILE = os.path.join(base_dir, '投资组合分析明细.xlsx')
 CHG_THRESHOLD = 0.03   # 权重变动达到 3 个百分点才提示
-BOND = '华泰保兴安悦债券C'   # 止损资金默认转入的债券基金
+BOND = '华泰保兴安悦债券C'   # 保留：历史配置默认值
+BONDS = (BOND, '国泰中债1-3年国开债A')  # 止损资金平均分到这两只债券
 
 
 def log(msg):
@@ -141,7 +142,7 @@ def main():
     funds = mstate.setdefault('funds', {})
 
     # 止损状态跨月保留：买入目标 = 总资产 × 目标权重 × pos（1.0 / 0.7 / 0.4 / 0.0 等）
-    # 腾出的资金计入债券；债券自身已清仓（pos=0）则留作现金，本月不再买入
+    # 腾出的资金平均计入仍在仓的两只债券；两只都已清仓则留作现金，本月不再买入
     def fund_pos(c):
         try:
             return float(funds.get(c, {}).get('pos', 1.0))
@@ -149,9 +150,14 @@ def main():
             return 1.0
 
     pos_map = {c: fund_pos(c) for c in W.index}
-    bond_on = pos_map.get(BOND, 0.0) > 0 if BOND in W.index else False
-    freed = capital * (1 - sum(W[c] * pos_map[c] for c in W.index)) if capital > 0 else 0.0
-    freed = max(freed, 0.0)
+    on_bonds = [b for b in BONDS if b in W.index and pos_map[b] > 0]
+    # 权益止损腾出的资金平均转入仍在仓的债券；债券自身止损的资金留作现金
+    freed_eq = capital * sum(W[c] * (1 - pos_map[c]) for c in W.index
+                             if c not in BONDS) if capital > 0 else 0.0
+    freed_bond = capital * sum(W[b] * (1 - pos_map[b]) for b in BONDS
+                               if b in W.index) if capital > 0 else 0.0
+    freed_eq, freed_bond = max(freed_eq, 0.0), max(freed_bond, 0.0)
+    freed_each = freed_eq / len(on_bonds) if on_bonds else 0.0
 
     table_rows, new_shares, held_amt = [], {}, 0.0
     for c in W.sort_values(ascending=False).index:
@@ -170,10 +176,10 @@ def main():
         pos_c = pos_map[c]
         sh_old = st.get('shares', float('nan'))
         amt_old = sh_old * n_end if pd.notna(sh_old) and pd.notna(n_end) else float('nan')
-        # 止损中的基金只买回剩余仓位；债券额外承接止损腾出的资金
+        # 止损中的基金只买回剩余仓位；两只债券平均承接止损腾出的资金
         eff_w = W[c] * pos_c
-        if bond_on and c == BOND:
-            eff_w = W[BOND] * 1.0 + (freed / capital if capital > 0 else 0.0)
+        if c in on_bonds:
+            eff_w = W[c] + (freed_each / capital if capital > 0 else 0.0)
         sh_new = capital * eff_w / n_end if (capital > 0 and pd.notna(n_end) and n_end > 0) else float('nan')
         dq_sh = sh_new - sh_old if pd.notna(sh_new) and pd.notna(sh_old) else float('nan')
         dq_amt = dq_sh * n_end if pd.notna(dq_sh) and pd.notna(n_end) else float('nan')
@@ -212,8 +218,8 @@ def main():
             'damount': f'{dq_amt:+,.2f}' if pd.notna(dq_amt) and abs(dq_amt) > 1e-9 else '—',
         })
 
-    # 债券已清仓时，止损资金留作现金（收益按 0 计）
-    cash_amt = freed if (capital > 0 and not bond_on) else 0.0
+    # 两只债券均已清仓时，止损资金留作现金（收益按 0 计）
+    cash_amt = freed_bond + (freed_eq if not on_bonds else 0.0) if capital > 0 else 0.0
     if cash_amt > 1e-9:
         table_rows.append({
             'fund': '现金（货币）', 'wt': f'{cash_amt / capital:.2%}', 'nav': '—',
@@ -252,10 +258,10 @@ def main():
     if metrics:
         intro += '\n' + metrics.replace('组合预期：', '组合预期：').replace(' / ', '　')
 
-    footer = ('权益类自高点回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金转债券），债券 ≥3% 清仓转现金；'
+    footer = ('权益类自高点回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金平均转入两只债券），债券 ≥3% 清仓转现金；'
               '冷静 20 个交易日，近 20 日收益 >0 且回撤修复至 -5% 内才回补；'
               '高点跨月连续跟踪，调仓不清零。'
-              '目标权重已按止损仓位折算（减仓至 70%/40% 时按比例、清仓记 0），腾出资金计入债券，债券已清仓则留现金；'
+              '目标权重已按止损仓位折算（减仓至 70%/40% 时按比例、清仓记 0），腾出资金平均计入两只债券，两只均已清仓则留现金；'
               '调仓份额为正表示买入，为负表示卖出。')
 
     ok = _push_table(f'本月调仓提醒 · {month_key}', intro, table_rows, footer)
