@@ -22,7 +22,8 @@ import numpy as np
 base_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(base_dir)
 
-BOND = '华泰保兴安悦债券C'
+BOND = '华泰保兴安悦债券C'  # 保留：历史配置默认值
+BONDS = (BOND, '国泰中债1-3年国开债A')  # 止损资金平均分到这两只债券
 # 权益类阶梯减仓：(自高点回撤阈值, 目标仓位)；回撤越大取最低目标仓位
 LEVELS = [(0.10, 0.70), (0.18, 0.40), (0.25, 0.00)]
 BOND_DD = 0.03        # 债券基金：自高点回撤 3% 清仓（资金转现金）
@@ -204,7 +205,7 @@ for c in W.index:
            if len(prices[c].dropna()) > RECOVER_WIN else np.nan)
     # 目标仓位：债券按 3% 清仓；权益按阶梯
     target = 1.0
-    if c == BOND:
+    if c in BONDS:
         if dd <= -BOND_DD:
             target = 0.0
     else:
@@ -234,7 +235,12 @@ for c in W.index:
     info[c] = {'p': p, 'dd': dd, 'bar_i': bar_i, 'r20': r20, 'act': act,
                'pos': float(st['pos']), 'ratio': ratio}
 
-bond_on = info.get(BOND, {}).get('pos', 1.0) > 0      # 债券是否仍在仓（决定止损资金去向）
+bond_on_map = {b: (info.get(b, {}).get('pos', 1.0) > 0 and b in funds)
+               for b in BONDS}
+on_bonds = [b for b in BONDS if bond_on_map[b]]   # 仍在仓、可承接止损资金的债券
+bond_on = bool(on_bonds)                            # 是否还有债券可承接止损资金
+bond_dest = ('、'.join(on_bonds) + ('（各半）' if len(on_bonds) == 2 else '（另一只已清仓，全部转入）')) \
+    if on_bonds else '现金'
 
 # 第二遍：生成状态表与今日动作文案
 rows, actions = [], []
@@ -245,11 +251,12 @@ for c in W.index:
     action = ''
     if act == '清仓':
         status = '已止损'
-        to = '现金' if (c == BOND or not bond_on) else '债券'
+        to = '现金' if (c in BONDS or not bond_on) else '两只债基各半' if len(on_bonds) == 2 else '债基'
         action = f'⚠ 止损清仓 → 转{to}'
         actions.append((c, '清仓', dd))
     elif act and act.startswith('减至'):
-        action = f'⚠ {act} → 转' + ('债券' if bond_on else '现金')
+        to = '两只债基各半' if len(on_bonds) == 2 else ('债基' if bond_on else '现金')
+        action = f'⚠ {act} → 转{to}'
         actions.append((c, act, dd))
     elif act == '冷静期':
         off_i = prices.index.get_loc(pd.Timestamp(st['last_off']))
@@ -276,8 +283,10 @@ stopped = [c for c in W.index if funds[c]['pos'] <= 0]
 half = [c for c in W.index if 0 < funds[c]['pos'] < 1]
 if stopped or half:
     moved = sum(W[c] * (1 - funds[c]['pos']) for c in stopped + half)
-    dest = f'{BOND}（债券当前实际权重 {W.get(BOND, 0) + (moved if BOND not in stopped else 0):.2%}）' \
-        if bond_on else '现金（债券自身已清仓，止损资金不再买债券）'
+    moved_eq = sum(W[c] * (1 - funds[c]['pos']) for c in stopped + half if c not in BONDS)
+    bond_now = sum(W.get(b, 0.0) for b in on_bonds) + moved_eq if on_bonds else 0.0
+    dest = f'{bond_dest}（债券当前实际权重合计 {bond_now:.2%}）' \
+        if bond_on else '现金（两只债券均已清仓，止损资金不再买债券）'
     print(f'\n已清仓 {len(stopped)} 只、减仓未回补 {len(half)} 只，腾出权重合计 {moved:.2%}，资金去向：{dest}')
 
 print('\n===== 今日动作 =====')
@@ -331,7 +340,7 @@ try:
             tgt = W[c] * CAPITAL
             dq_sh = tgt / nav - (sh if pd.notna(sh) else 0)
             dq_amt = tgt - (amt if pd.notna(amt) else 0)
-        if act and rate > 0 and c != BOND and pd.notna(amt):
+        if act and rate > 0 and c not in BONDS and pd.notna(amt):
             sell_amt += -dq_amt
         if pd.notna(amt):
             total_amt += amt
@@ -361,14 +370,15 @@ try:
             'peak_date': peak_date(c),
         })
 
-    # 止损资金转入债券：在债券行体现买入份额；债券自身已清仓则转现金（不买债券）
+    # 止损资金平均转入仍在仓的债券：在各债券行体现买入份额；均已清仓则转现金
     if sell_amt > 0 and bond_on:
+        each = sell_amt / len(on_bonds)
         for x in table_rows:
-            if x['fund'] == BOND:
-                bn = nav_at(BOND, last_date)
+            if x['fund'] in on_bonds:
+                bn = nav_at(x['fund'], last_date)
                 if pd.notna(bn) and bn > 0:
-                    x['dshares'] = f'{sell_amt / bn:+,.2f}'
-                    x['damount'] = f'{sell_amt:+,.2f}'
+                    x['dshares'] = f'{each / bn:+,.2f}'
+                    x['damount'] = f'{each:+,.2f}'
 
     # 份额台账随动作更新：清仓清零、阶梯减仓按比例卖出、回补恢复目标份额、债券接收止损资金
     for c, a, _ in actions:
@@ -382,9 +392,11 @@ try:
             if pd.notna(nav) and nav > 0:
                 funds[c]['shares'] = W[c] * CAPITAL / nav
     if sell_amt > 0 and bond_on:
-        bn = nav_at(BOND, last_date)
-        if pd.notna(bn) and bn > 0:
-            funds[BOND]['shares'] = funds[BOND].get('shares', 0.0) + sell_amt / bn
+        each = sell_amt / len(on_bonds)
+        for b in on_bonds:
+            bn = nav_at(b, last_date)
+            if pd.notna(bn) and bn > 0:
+                funds[b]['shares'] = funds[b].get('shares', 0.0) + each / bn
     if actions:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
@@ -417,14 +429,14 @@ try:
     else:
         intro = '**未触发止损线**（权益 10%/18%/25% 阶梯减至 70%/40%/清仓，债券 3% 清仓），全部持仓继续持有。'
     if actions and not bond_on:
-        intro += '\n债券自身已清仓，止损资金转现金（收益按 0 计），不再买入债券。'
+        intro += '\n两只债券均已清仓，止损资金转现金（收益按 0 计），不再买入债券。'
     if CAPITAL > 0:
         intro += f'\n数据日 {last_date.date()}　总资产 {CAPITAL:,.2f} 元　持仓市值 {total_amt:,.2f} 元'
     else:
         intro += f'\n数据日 {last_date.date()}　（未配置总资产，金额列留空）'
 
     footer = (f'高点自 {funds[W.index[0]].get("since", "—")} 起连续跟踪，调仓不清零；'
-              '权益回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金转债券），债券 3% 清仓转现金，'
+              '权益回撤 ≥10% 减至 70%、≥18% 减至 40%、≥25% 清仓（资金平均转入两只债券），债券 3% 清仓转现金，'
               '冷静 20 个交易日、回补需近 20 日收益 >0 且回撤修复至 -5% 以内。'
               '调仓份额为正表示买入，为负表示卖出。')
 
