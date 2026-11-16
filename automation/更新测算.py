@@ -48,27 +48,33 @@ def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
         return 1e10
     return -(port_ret - risk_free) / port_vol
 
-def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3, fixed_weights=None):
-    """最大夏普：凸化精确求解；fixed_weights 为 {列索引: 固定目标权重}。
+def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3,
+                               fixed_weights=None, max_weights=None):
+    """最大夏普：凸化精确求解。
 
-    令 y=w/sum(y)，固定 w_i=t 等价于 y_i=t*sum(y)，可与权重上限共同求解。
+    fixed_weights 为 {列索引: 固定目标权重}（等式约束）；
+    max_weights 为 {列索引: 单独上限}，覆盖该资产的默认 max_weight。
     """
     mu = np.asarray(mean_ret, dtype=float)
     cov = np.asarray(cov_matrix, dtype=float)
     n = len(mu)
     ex = mu - 0.02
     fixed_weights = fixed_weights or {}
+    max_weights = max_weights or {}
+    caps = np.full(n, max_weight)
+    for i, cap in max_weights.items():
+        caps[i] = cap
 
     def sharpe(w):
         return (w @ mu - 0.02) / np.sqrt(w @ cov @ w)
 
-    # 无正超额收益时最大夏普无解，退化为最小方差，仍保持固定权重约束
+    # 无正超额收益时最大夏普无解，退化为最小方差，仍保持上限与固定权重约束
     if np.max(ex) <= 0:
         constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
         constraints += [{'type': 'eq', 'fun': lambda w, i=i, t=t: w[i] - t}
                         for i, t in fixed_weights.items()]
         res = minimize(lambda w: w @ cov @ w, np.full(n, 1 / n), method='SLSQP',
-                       bounds=[(0, max_weight)] * n, constraints=constraints,
+                       bounds=[(0, caps[i]) for i in range(n)], constraints=constraints,
                        options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
         if not res.success:
             return None, -np.inf
@@ -77,7 +83,7 @@ def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.
     y0 = np.clip(ex, 0, None)
     y0 = y0 / (ex @ y0)
     constraints = [{'type': 'eq', 'fun': lambda y: ex @ y - 1},
-                   {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y}]
+                   {'type': 'ineq', 'fun': lambda y: caps * np.sum(y) - y}]
     constraints += [{'type': 'eq', 'fun': lambda y, i=i, t=t: y[i] - t * np.sum(y)}
                     for i, t in fixed_weights.items()]
     res = minimize(lambda y: y @ cov @ y, y0, method='SLSQP',
@@ -179,24 +185,24 @@ common_cols = [col for col in monthly_ret_3y.columns if col in daily_ret_1y.colu
 mean_ret_annual = mean_ret_annual[common_cols]
 cov_matrix = cov_1y.loc[common_cols, common_cols]
 
-FIXED_WEIGHTS = {'华泰保兴安悦债券C': 0.20, '国泰中债1-3年国开债A': 0.20}
-missing_fixed = [c for c in FIXED_WEIGHTS if c not in common_cols]
-if missing_fixed:
-    raise RuntimeError(f"固定权重基金缺少有效样本：{'、'.join(missing_fixed)}")
-fixed_idx = {common_cols.index(c): w for c, w in FIXED_WEIGHTS.items()}
-print("MV固定约束：华泰保兴安悦债券C、国泰中债1-3年国开债A各20%；其余单只上限30%")
+BOND_CAPS = {'华泰保兴安悦债券C': 0.20, '国泰中债1-3年国开债A': 0.20}
+missing_bond = [c for c in BOND_CAPS if c not in common_cols]
+if missing_bond:
+    raise RuntimeError(f"债券基金缺少有效样本：{'、'.join(missing_bond)}")
+bond_cap_idx = {common_cols.index(c): w for c, w in BOND_CAPS.items()}
+print("MV约束：华泰保兴安悦债券C、国泰中债1-3年国开债A各上限20%；其余单只上限30%")
 
 epsilon = 1e-6
 cov_matrix_reg = cov_matrix + np.eye(cov_matrix.shape[0]) * epsilon
 
 opt_weights, max_sharpe = optimize_sharpe_multistart(
     mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3,
-    fixed_weights=fixed_idx)
+    max_weights=bond_cap_idx)
 if opt_weights is None:
-    print("30%上限无解，放宽其余基金至100%（两只债券仍各固定20%）")
+    print("30%上限无解，放宽其余基金至100%（两只债券仍各上限20%）")
     opt_weights, max_sharpe = optimize_sharpe_multistart(
         mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0,
-        fixed_weights=fixed_idx)
+        max_weights=bond_cap_idx)
     if opt_weights is None:
         raise RuntimeError("优化失败")
 weights_series = pd.Series(opt_weights, index=common_cols, dtype=float)
