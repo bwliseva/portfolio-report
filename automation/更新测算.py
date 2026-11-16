@@ -38,7 +38,8 @@ df_cum = df_raw / 100.0
 print(f"数据日期范围：{df_cum.index.min()} 至 {df_cum.index.max()}")
 print(f"基金数量：{df_cum.shape[1]}")
 
-daily_ret = df_cum.diff().iloc[1:]
+# 累计收益率须先还原为净值指数，再计算日收益，不能直接对累计收益差分
+daily_ret = (1 + df_cum).pct_change(fill_method=None).iloc[1:]
 
 def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
     port_ret = np.sum(weights * mean_ret)
@@ -47,34 +48,38 @@ def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
         return 1e10
     return -(port_ret - risk_free) / port_vol
 
-def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3):
-    """最大夏普：凸化精确求解（n_starts 仅为兼容旧调用保留，内部不再用随机起点）。
+def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3, fixed_weights=None):
+    """最大夏普：凸化精确求解；fixed_weights 为 {列索引: 固定目标权重}。
 
-    令 y = w / (mu·w - rf)，则 max (mu·w-rf)/sqrt(w'Σw) 等价于凸二次规划：
-        min y'Σy   s.t. (mu-rf)'y = 1, y >= 0, y_i <= max_weight * sum(y)
-    凸问题的局部最优即全局最优，因此 w = y / sum(y) 为精确解。
+    令 y=w/sum(y)，固定 w_i=t 等价于 y_i=t*sum(y)，可与权重上限共同求解。
     """
     mu = np.asarray(mean_ret, dtype=float)
     cov = np.asarray(cov_matrix, dtype=float)
     n = len(mu)
     ex = mu - 0.02
+    fixed_weights = fixed_weights or {}
 
     def sharpe(w):
         return (w @ mu - 0.02) / np.sqrt(w @ cov @ w)
 
-    # 无正超额收益时最大夏普无解，退化为最小方差
+    # 无正超额收益时最大夏普无解，退化为最小方差，仍保持固定权重约束
     if np.max(ex) <= 0:
+        constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
+        constraints += [{'type': 'eq', 'fun': lambda w, i=i, t=t: w[i] - t}
+                        for i, t in fixed_weights.items()]
         res = minimize(lambda w: w @ cov @ w, np.full(n, 1 / n), method='SLSQP',
-                       bounds=[(0, max_weight)] * n,
-                       constraints=({'type': 'eq', 'fun': lambda w: np.sum(w) - 1},),
+                       bounds=[(0, max_weight)] * n, constraints=constraints,
                        options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
-        w = res.x if res.success else np.full(n, 1 / n)
-        return w, sharpe(w)
+        if not res.success:
+            return None, -np.inf
+        return res.x, sharpe(res.x)
 
     y0 = np.clip(ex, 0, None)
     y0 = y0 / (ex @ y0)
-    constraints = ({'type': 'eq', 'fun': lambda y: ex @ y - 1},
-                   {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y})
+    constraints = [{'type': 'eq', 'fun': lambda y: ex @ y - 1},
+                   {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y}]
+    constraints += [{'type': 'eq', 'fun': lambda y, i=i, t=t: y[i] - t * np.sum(y)}
+                    for i, t in fixed_weights.items()]
     res = minimize(lambda y: y @ cov @ y, y0, method='SLSQP',
                    bounds=[(0, None)] * n, constraints=constraints,
                    options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
@@ -92,9 +97,12 @@ def optimize_risk_parity(cov_matrix):
     for _ in range(5000):
         w_new = w.copy()
         for i in range(n):
-            b = float(cov[i] @ w - cov[i, i] * w[i])
+            # Gauss-Seidel 顺序更新，避免高条件数下 Jacobi 迭代溢出
+            b = float(cov[i] @ w_new - cov[i, i] * w_new[i])
             disc = b * b + 4 * diag[i] / n
-            w_new[i] = (-b + np.sqrt(disc)) / (2 * diag[i]) if disc > 0 else w[i]
+            w_new[i] = (-b + np.sqrt(disc)) / (2 * diag[i]) if disc > 0 else w_new[i]
+        if not np.all(np.isfinite(w_new)):
+            return None
         if np.max(np.abs(w_new - w)) < 1e-15:
             w = w_new
             break
@@ -111,7 +119,7 @@ try:
     monthly_last = df_cum_3y.resample('ME').last()
 except ValueError:
     monthly_last = df_cum_3y.resample('M').last()
-monthly_ret = monthly_last.diff().dropna(how='all')
+monthly_ret = (1 + monthly_last).pct_change(fill_method=None).dropna(how='all')
 # 期望收益按各基金实际可得月份计算，要求至少 24 个月，避免短样本噪声
 short = [c for c in monthly_ret.columns if monthly_ret[c].count() < 24]
 if short:
@@ -171,13 +179,24 @@ common_cols = [col for col in monthly_ret_3y.columns if col in daily_ret_1y.colu
 mean_ret_annual = mean_ret_annual[common_cols]
 cov_matrix = cov_1y.loc[common_cols, common_cols]
 
+FIXED_WEIGHTS = {'华泰保兴安悦债券C': 0.20, '国泰中债1-3年国开债A': 0.20}
+missing_fixed = [c for c in FIXED_WEIGHTS if c not in common_cols]
+if missing_fixed:
+    raise RuntimeError(f"固定权重基金缺少有效样本：{'、'.join(missing_fixed)}")
+fixed_idx = {common_cols.index(c): w for c, w in FIXED_WEIGHTS.items()}
+print("MV固定约束：华泰保兴安悦债券C、国泰中债1-3年国开债A各20%；其余单只上限30%")
+
 epsilon = 1e-6
 cov_matrix_reg = cov_matrix + np.eye(cov_matrix.shape[0]) * epsilon
 
-opt_weights, max_sharpe = optimize_sharpe_multistart(mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3)
+opt_weights, max_sharpe = optimize_sharpe_multistart(
+    mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3,
+    fixed_weights=fixed_idx)
 if opt_weights is None:
-    print("30%上限无解，放宽至100%")
-    opt_weights, max_sharpe = optimize_sharpe_multistart(mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0)
+    print("30%上限无解，放宽其余基金至100%（两只债券仍各固定20%）")
+    opt_weights, max_sharpe = optimize_sharpe_multistart(
+        mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0,
+        fixed_weights=fixed_idx)
     if opt_weights is None:
         raise RuntimeError("优化失败")
 weights_series = pd.Series(opt_weights, index=common_cols, dtype=float)
