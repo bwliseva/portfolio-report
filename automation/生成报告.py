@@ -53,11 +53,12 @@ CATEGORY_GROUPS = [
                         '国泰中证全指通信设备ETF联接C']),
     ('公用事业', False, ['广发电力ETF联接C']),
     ('医药消费', False, ['永赢医药创新智选混合发起C', '广发中证全指家用电器ETF联接C',
-                        '招商中证白酒指数C', '华宝中证沪港深新消费指数C']),
+                        '招商中证白酒指数C', '华宝中证沪港深新消费指数C',
+                        '天弘中证食品饮料ETF联接C']),
     ('周期资源', False, ['富国中证煤炭指数C', '嘉实中证稀有金属主题ETF发起联接C',
                         '华泰柏瑞中证稀土产业ETF发起式联接C', '天弘中证细分化工产业主题ETF联接C']),
-    ('金融 / 军工 / 农业', False, ['南方中证全指证券公司ETF联接C', '富国中证军工指数(LOF)C',
-                                '农银现代农业加混合']),
+    ('金融 / 军工 / 农业', False, ['南方中证全指证券公司ETF联接C', '天弘中证银行ETF联接C',
+                                '富国中证军工指数(LOF)C', '农银现代农业加混合']),
 ]
 FUND_CAT = {f: (cat, gold) for cat, gold, fs in CATEGORY_GROUPS for f in fs}
 
@@ -866,6 +867,66 @@ cmp_dd = num(cmp_m.get('最大回撤')) if cmp_m else None
 main_n = stop_m.get('止损事件数') if stop_m else None
 main_whip = stop_m.get('打脸次数(≤10日回补)') if stop_m else None
 
+# ---------------------------------------------------------------- 银行宏观跟踪
+def bank_macro_block():
+    path = '银行宏观指标.csv'
+    empty = '<tr><td colspan="5">未找到银行宏观指标，请补录后重跑。</td></tr>'
+    if not os.path.exists(path):
+        return empty, '数据待补录。', ''
+    m = pd.read_csv(path, encoding='utf-8-sig')
+    if m.empty:
+        return empty, '数据待补录。', ''
+    r = m.iloc[-1]
+    try:
+        nim, npl = float(r['净息差']), float(r['不良率'])
+        dy, y10 = float(r['股息率']), float(r['十年国债'])
+    except (TypeError, ValueError):
+        return empty, '数据格式有误，请检查 银行宏观指标.csv。', ''
+    spread = dy - y10
+
+    def _d(v):
+        return str(v)[:10]
+
+    if nim >= 1.80:
+        nim_s, nim_c, nim_t = '改善', '', '高于 1.80%，盈利端修复'
+    elif nim >= 1.50:
+        nim_s, nim_c, nim_t = '企稳', '', '处于 1.50%–1.80%，边际企稳'
+    else:
+        nim_s, nim_c, nim_t = '承压', ' gold', '低于 1.50%，盈利端仍承压'
+
+    if npl <= 1.60:
+        npl_s, npl_c, npl_t = '稳健', '', '不高于 1.60%，资产质量总体稳健'
+    elif npl <= 2.00:
+        npl_s, npl_c, npl_t = '关注', ' gold', '处于 1.60%–2.00%，需关注地产与城投'
+    else:
+        npl_s, npl_c, npl_t = '风险', ' gold', '高于 2.00%，资产质量压力较大'
+
+    if spread >= 3.0:
+        sp_s, sp_c, sp_t = '吸引力强', '', '利差不低于 3.0 个百分点'
+    elif spread >= 2.0:
+        sp_s, sp_c, sp_t = '中性', ' gold', '利差处于 2.0–3.0 个百分点'
+    else:
+        sp_s, sp_c, sp_t = '吸引力弱', ' gold', '利差低于 2.0 个百分点'
+
+    rows = [
+        f'<tr><td>商业银行净息差</td><td class="num">{nim:.2f}%</td><td>{_d(r["净息差截止"])}</td>'
+        f'<td><span class="badge{nim_c}">{nim_s}</span></td><td>{nim_t}</td></tr>',
+        f'<tr><td>商业银行不良贷款率</td><td class="num">{npl:.2f}%</td><td>{_d(r["不良率截止"])}</td>'
+        f'<td><span class="badge{npl_c}">{npl_s}</span></td><td>{npl_t}</td></tr>',
+        f'<tr><td>银行股息率 − 10 年国债</td><td class="num">{spread:.2f}pct</td><td>{_d(r["股息率截止"])}</td>'
+        f'<td><span class="badge{sp_c}">{sp_s}</span></td><td>{sp_t}（{dy:.2f}% − {y10:.2f}%）</td></tr>',
+    ]
+    note = (f'数据来源：{r["来源"]}。净息差与不良率为季度数据，股息率与 10 年期国债为月度数据；'
+            f'更新时编辑 银行宏观指标.csv，再重跑 生成报告.py。')
+    view = (f'三项指标合起来：净息差 {nim:.2f}%（{nim_s}）、不良率 {npl:.2f}%（{npl_s}）、'
+            f'股息率与 10 年国债利差 {spread:.2f} 个百分点（{sp_s}）。'
+            + ('银行仍可作为低波底仓，但盈利端尚未完全修复，30% 上限不宜放宽。'
+               if nim < 1.50 else '银行基本面与股息吸引力仍在，可按模型权重持有。'))
+    return '\n'.join(rows), note, view
+
+
+macro_rows, macro_note, macro_view = bank_macro_block()
+
 repl = {
     'TITLE_MONTH': as_of.strftime('%Y-%m'),
     'KICKER_MONTH': as_of.strftime('%Y 年 %m 月').replace(' 0', ' '),
@@ -880,6 +941,9 @@ repl = {
     'BASE_DATE': base_dt.strftime('%Y-%m-%d'),
     'TOTAL_ASSETS': f'{capital:,.2f}',
     'CASH': f'{cash:,.2f}',
+    'BANK_MACRO_ROWS': macro_rows,
+    'BANK_MACRO_NOTE': macro_note,
+    'BANK_MACRO_VIEW': macro_view,
     'OTHER_HOLD_TEXT': other_text,
     'ADJ_BUY': f'{adj_buy:,.2f}',
     'ADJ_SELL': f'{adj_sell:,.2f}',
