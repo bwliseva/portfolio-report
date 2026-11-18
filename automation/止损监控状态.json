@@ -1,100 +1,68 @@
 {
   "funds": {
-    "国泰黄金ETF联接C": {
-      "peak": 1.7934999999999999,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 1115.0901,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
     "华泰保兴安悦债券C": {
-      "peak": 1.2061,
+      "peak": 1.1871,
       "on": true,
       "last_off": null,
-      "since": "2026-11-06",
-      "shares": 31728.0592,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
-    "易方达恒生港股通红利低波动ETF联接发起式C": {
-      "peak": 1.2563,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 33138.6542,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
-    "富国中证煤炭指数C": {
-      "peak": 1.1961,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 5557.0083,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
-    "嘉实上证科创板芯片ETF发起联接C": {
-      "peak": 2.2368,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 1298.1495,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
-    "易方达中证1000量化增强C": {
-      "peak": 1.4956,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 11222.2125,
-      "rebalanced": "2026-11-11",
-      "pos": 1.0
-    },
-    "永赢医药创新智选混合发起C": {
-      "peak": 1.4104999999999999,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 12191.6284,
-      "rebalanced": "2026-11-11",
+      "since": "2026-11-18",
+      "shares": 21235.8015,
+      "rebalanced": "2026-11-18",
       "pos": 1.0
     },
     "国泰中债1-3年国开债A": {
-      "peak": 1.0857,
+      "peak": 1.0395,
       "on": true,
       "last_off": null,
-      "since": "2026-11-16",
-      "pos": 1.0,
-      "shares": 0.0
+      "since": "2026-11-18",
+      "shares": 24251.1015,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
     },
-    "国泰中证全指通信设备ETF联接C": {
-      "peak": 2.2683,
+    "易方达恒生港股通红利低波动ETF联接发起式C": {
+      "peak": 1.145,
       "on": true,
       "last_off": null,
-      "since": "2026-11-16",
-      "pos": 1.0,
-      "shares": 0.0
-    },
-    "招商中证机器人ETF发起联接C": {
-      "peak": 1.2745,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-17",
-      "pos": 1.0,
-      "shares": 0.0
+      "since": "2026-11-18",
+      "shares": 20814.6477,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
     },
     "天弘中证银行ETF联接C": {
-      "peak": 1.6643000000000001,
+      "peak": 1.9447,
       "on": true,
       "last_off": null,
-      "since": "2026-11-17",
-      "pos": 1.0,
-      "shares": 0.0
+      "since": "2026-11-18",
+      "shares": 19444.4027,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
+    },
+    "嘉实上证科创板芯片ETF发起联接C": {
+      "peak": 2.0281,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-18",
+      "shares": 4064.9862,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
+    },
+    "国泰中证全指通信设备ETF联接C": {
+      "peak": 2.2114,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-18",
+      "shares": 1970.4864,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
+    },
+    "招商中证机器人ETF发起联接C": {
+      "peak": 1.3013,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-18",
+      "shares": 1059.7297,
+      "rebalanced": "2026-11-18",
+      "pos": 1.0
     }
   },
-  "plan_date": "2026-11-16"
+  "plan_date": "2026-11-18"
 }
