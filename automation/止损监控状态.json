@@ -63,33 +63,8 @@
       "rebalanced": "2026-11-11",
       "pos": 1.0
     },
-    "广发中证全指家用电器ETF联接C": {
-      "peak": 1.2858,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-06",
-      "shares": 0.0,
-      "pos": 1.0,
-      "rebalanced": "2026-11-11"
-    },
-    "工银黄金ETF联接C": {
-      "peak": 1.6693000000000002,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-13",
-      "pos": 1.0,
-      "shares": 0.0
-    },
     "国泰中债1-3年国开债A": {
-      "peak": 1.0845,
-      "on": true,
-      "last_off": null,
-      "since": "2026-11-16",
-      "pos": 1.0,
-      "shares": 0.0
-    },
-    "广发电力ETF联接C": {
-      "peak": 1.1687,
+      "peak": 1.0857,
       "on": true,
       "last_off": null,
       "since": "2026-11-16",
@@ -103,7 +78,23 @@
       "since": "2026-11-16",
       "pos": 1.0,
       "shares": 0.0
+    },
+    "招商中证机器人ETF发起联接C": {
+      "peak": 1.2745,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-17",
+      "pos": 1.0,
+      "shares": 0.0
+    },
+    "天弘中证银行ETF联接C": {
+      "peak": 1.6643000000000001,
+      "on": true,
+      "last_off": null,
+      "since": "2026-11-17",
+      "pos": 1.0,
+      "shares": 0.0
     }
   },
-  "plan_date": "2026-11-13"
+  "plan_date": "2026-11-16"
 }
