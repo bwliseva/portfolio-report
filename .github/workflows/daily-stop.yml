@@ -36,21 +36,16 @@ jobs:
           HOUR=$(TZ=Asia/Shanghai date +%H)
           CUTOFF_PASSED=false
           if [ "$HOUR" -ge 16 ]; then CUTOFF_PASSED=true; fi
-          echo "北京时间 ${TODAY} ${HOUR}:00，过 16:00 截止线：${CUTOFF_PASSED}"
-          # 16:00 之后才真正计入"今天已推"；
-          # 16:00 之前就算有 last_push_date.txt = 今天，也视为"上一次凌晨手动 run 占的名额"，不计入
+          echo "cutoff_passed=$CUTOFF_PASSED" >> $GITHUB_OUTPUT
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "skip=false" >> $GITHUB_OUTPUT
             echo "手动触发，强制执行"
-          elif [ "${CUTOFF_PASSED}" = "true" ] \
-               && [ -f automation/last_push_date.txt ] \
-               && [ "$(cat automation/last_push_date.txt)" = "$TODAY" ]; then
+          elif [ "${CUTOFF_PASSED}" = "true" ] && [ -f automation/last_push_date.txt ] && [ "$(cat automation/last_push_date.txt)" = "$TODAY" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "今日（$TODAY）已在 16:00 之后推送过，跳过兜底触发"
+            echo "今日（$TODAY）已推送，跳过本次兜底触发"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
-          echo "cutoff_passed=${CUTOFF_PASSED}" >> $GITHUB_OUTPUT
 
       - name: 运行每日止损监控
         if: steps.check.outputs.skip != 'true'
@@ -64,9 +59,7 @@ jobs:
 
       - name: 记录推送日期
         if: steps.check.outputs.skip != 'true' && steps.check.outputs.cutoff_passed == 'true'
-        run: |
-          TZ=Asia/Shanghai date +%F > automation/last_push_date.txt
-          echo "已写入 $(cat automation/last_push_date.txt)（过 16:00 截止线，计入今日）"
+        run: TZ=Asia/Shanghai date +%F > automation/last_push_date.txt
 
       - name: 回写状态与心跳
         if: always()
