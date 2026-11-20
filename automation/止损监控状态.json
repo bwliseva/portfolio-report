@@ -1,7 +1,7 @@
 {
   "funds": {
     "华泰保兴安悦债券C": {
-      "peak": 1.2046000000000001,
+      "peak": 1.205,
       "on": true,
       "last_off": null,
       "since": "2026-11-18",
@@ -28,7 +28,7 @@
       "pos": 1.0
     },
     "天弘中证银行ETF联接C": {
-      "peak": 1.6596,
+      "peak": 1.6787,
       "on": true,
       "last_off": null,
       "since": "2026-11-01",
