@@ -55,6 +55,7 @@ jobs:
           git add automation/调仓提醒状态.json 2>/dev/null || true
           git add automation/止损监控状态.json 2>/dev/null || true
           git add automation/投资组合分析明细.xlsx 2>/dev/null || true
+          git add automation/本月目标权重.json 2>/dev/null || true
           git add automation/每日基金净值_自动_*.xlsx 2>/dev/null || true
           date -u +"%Y-%m-%d %H:%M UTC" > automation/last_monthly_run.txt
           git add automation/last_monthly_run.txt 2>/dev/null || true
