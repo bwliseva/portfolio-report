@@ -6,6 +6,8 @@ from scipy.optimize import minimize
 import datetime
 import os
 import glob
+import json
+import sys
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -49,32 +51,31 @@ def negative_sharpe(weights, mean_ret, cov_matrix, risk_free=0.02):
     return -(port_ret - risk_free) / port_vol
 
 def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.3,
-                               fixed_weights=None, max_weights=None):
+                               fixed_weights=None, caps=None):
     """最大夏普：凸化精确求解。
 
     fixed_weights 为 {列索引: 固定目标权重}（等式约束）；
-    max_weights 为 {列索引: 单独上限}，覆盖该资产的默认 max_weight。
+    caps 为 {列索引: 单只上限}（不等式约束，允许低于上限）。
     """
     mu = np.asarray(mean_ret, dtype=float)
     cov = np.asarray(cov_matrix, dtype=float)
     n = len(mu)
     ex = mu - 0.02
     fixed_weights = fixed_weights or {}
-    max_weights = max_weights or {}
-    caps = np.full(n, max_weight)
-    for i, cap in max_weights.items():
-        caps[i] = cap
+    caps = caps or {}
 
     def sharpe(w):
         return (w @ mu - 0.02) / np.sqrt(w @ cov @ w)
 
-    # 无正超额收益时最大夏普无解，退化为最小方差，仍保持上限与固定权重约束
+    # 无正超额收益时最大夏普无解，退化为最小方差，仍保持债券上限约束
     if np.max(ex) <= 0:
         constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
         constraints += [{'type': 'eq', 'fun': lambda w, i=i, t=t: w[i] - t}
                         for i, t in fixed_weights.items()]
+        constraints += [{'type': 'ineq', 'fun': lambda w, i=i, c=c: c - w[i]}
+                        for i, c in caps.items()]
         res = minimize(lambda w: w @ cov @ w, np.full(n, 1 / n), method='SLSQP',
-                       bounds=[(0, caps[i]) for i in range(n)], constraints=constraints,
+                       bounds=[(0, max_weight)] * n, constraints=constraints,
                        options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
         if not res.success:
             return None, -np.inf
@@ -83,9 +84,12 @@ def optimize_sharpe_multistart(mean_ret, cov_matrix, n_starts=100, max_weight=0.
     y0 = np.clip(ex, 0, None)
     y0 = y0 / (ex @ y0)
     constraints = [{'type': 'eq', 'fun': lambda y: ex @ y - 1},
-                   {'type': 'ineq', 'fun': lambda y: caps * np.sum(y) - y}]
+                   {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y}]
     constraints += [{'type': 'eq', 'fun': lambda y, i=i, t=t: y[i] - t * np.sum(y)}
                     for i, t in fixed_weights.items()]
+    # y=w/sum(y)，故 w_i<=c 等价于 y_i<=c*sum(y)
+    constraints += [{'type': 'ineq', 'fun': lambda y, i=i, c=c: c * np.sum(y) - y[i]}
+                    for i, c in caps.items()]
     res = minimize(lambda y: y @ cov @ y, y0, method='SLSQP',
                    bounds=[(0, None)] * n, constraints=constraints,
                    options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
@@ -186,25 +190,49 @@ mean_ret_annual = mean_ret_annual[common_cols]
 cov_matrix = cov_1y.loc[common_cols, common_cols]
 
 BOND_CAPS = {'华泰保兴安悦债券C': 0.20, '国泰中债1-3年国开债A': 0.20}
-missing_bond = [c for c in BOND_CAPS if c not in common_cols]
-if missing_bond:
-    raise RuntimeError(f"债券基金缺少有效样本：{'、'.join(missing_bond)}")
+missing_fixed = [c for c in BOND_CAPS if c not in common_cols]
+if missing_fixed:
+    raise RuntimeError(f"债券基金缺少有效样本：{'、'.join(missing_fixed)}")
 bond_cap_idx = {common_cols.index(c): w for c, w in BOND_CAPS.items()}
-print("MV约束：华泰保兴安悦债券C、国泰中债1-3年国开债A各上限20%；其余单只上限30%")
+print("MV约束：两只债基单只上限20%；其余单只上限30%")
+
+# ---- 每日刷新：--freeze-weights 时锁定本月目标权重（只更新数据与曲线，不重算权重） ----
+FROZEN_PATH = os.path.join(base_dir, '本月目标权重.json')
+FREEZE = '--freeze-weights' in sys.argv
+frozen = {}
+if FREEZE:
+    if os.path.exists(FROZEN_PATH):
+        with open(FROZEN_PATH, encoding='utf-8') as f:
+            frozen = json.load(f)
+        print(f"权重已锁定（本月目标 {frozen.get('month', '—')}，{frozen.get('asof', '—')}）")
+    else:
+        print("[警告] 未找到 本月目标权重.json，本次按最新数据重算权重")
+
+
+def _frozen_vec(d, cols):
+    v = np.array([float(d.get(c, 0.0)) for c in cols], dtype=float)
+    s = v.sum()
+    return v / s if s > 0 else None
 
 epsilon = 1e-6
 cov_matrix_reg = cov_matrix + np.eye(cov_matrix.shape[0]) * epsilon
 
-opt_weights, max_sharpe = optimize_sharpe_multistart(
-    mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3,
-    max_weights=bond_cap_idx)
+opt_weights = _frozen_vec(frozen['mv'], common_cols) if frozen.get('mv') else None
+max_sharpe = None
 if opt_weights is None:
-    print("30%上限无解，放宽其余基金至100%（两只债券仍各上限20%）")
     opt_weights, max_sharpe = optimize_sharpe_multistart(
-        mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0,
-        max_weights=bond_cap_idx)
+        mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=0.3,
+        caps=bond_cap_idx)
     if opt_weights is None:
-        raise RuntimeError("优化失败")
+        print("30%上限无解，放宽其余基金至100%（两只债券仍各不超过20%）")
+        opt_weights, max_sharpe = optimize_sharpe_multistart(
+            mean_ret_annual.values, cov_matrix_reg.values, n_starts=100, max_weight=1.0,
+            caps=bond_cap_idx)
+        if opt_weights is None:
+            raise RuntimeError("优化失败")
+if max_sharpe is None:
+    max_sharpe = float((opt_weights @ mean_ret_annual.values - 0.02)
+                       / np.sqrt(opt_weights @ cov_matrix_reg.values @ opt_weights))
 weights_series = pd.Series(opt_weights, index=common_cols, dtype=float)
 weights_series_nonzero = weights_series[weights_series > 1e-6]
 print("\n最优配置权重：")
@@ -290,7 +318,9 @@ sub_1m = plot_interval_cumulative(port_cum_abs, start_1m, '最近一个月累计
 
 # ==================== 风险平价模型（波动率取最近一年） ====================
 # 精确 ERC 求解，不设单只权重上限
-rp_opt_weights = optimize_risk_parity(cov_matrix_reg.values)
+rp_opt_weights = _frozen_vec(frozen['rp'], common_cols) if frozen.get('rp') else None
+if rp_opt_weights is None:
+    rp_opt_weights = optimize_risk_parity(cov_matrix_reg.values)
 if rp_opt_weights is None:
     raise RuntimeError("风险平价优化失败")
 rp_weights_series = pd.Series(rp_opt_weights, index=common_cols, dtype=float)
@@ -302,6 +332,17 @@ rp_port_ret = np.sum(rp_weights_series * mean_ret_annual)
 rp_port_vol = np.sqrt(rp_weights_series @ cov_matrix_reg @ rp_weights_series)
 rp_sharpe = (rp_port_ret - 0.02) / rp_port_vol if rp_port_vol > 0 else np.nan
 print(f"风险平价组合：年化收益率 {rp_port_ret:.4%}，年化波动率 {rp_port_vol:.4%}，夏普比率 {rp_sharpe:.4f}")
+
+# 非冻结模式（月度重算）把当月目标权重落盘，供每日报告按锁定权重重算
+if not FREEZE:
+    with open(FROZEN_PATH, 'w', encoding='utf-8') as f:
+        json.dump({
+            'month': df_cum.index.max().strftime('%Y-%m'),
+            'asof': df_cum.index.max().strftime('%Y-%m-%d'),
+            'mv': {k: round(float(v), 6) for k, v in weights_series.items() if v > 1e-6},
+            'rp': {k: round(float(v), 6) for k, v in rp_weights_series.items() if v > 1e-6},
+        }, f, ensure_ascii=False, indent=2)
+    print(f"已写入 {os.path.basename(FROZEN_PATH)}（本月目标权重）")
 
 # 各资产风险贡献占比（风险平价核心指标）
 rp_sigma = np.sqrt(rp_weights_series @ cov_matrix_reg @ rp_weights_series)
