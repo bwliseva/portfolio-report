@@ -17,32 +17,44 @@ RF = 0.02
 MAX_W = 0.30
 BOND = '华泰保兴安悦债券C'  # 保留：历史调用与回调参数默认值
 BONDS = (BOND, '国泰中债1-3年国开债A')  # 止损资金平均分到这两只债券
-BOND_CAPS = {BOND: 0.20, '国泰中债1-3年国开债A': 0.20}   # 两只债券各自上限 20%
+BOND_CAPS = {BOND: 0.20, '国泰中债1-3年国开债A': 0.20}  # 单只上限 20%，不强制等于
 HALF_DD, FULL_DD, BOND_DD = 0.10, 0.15, 0.03
 RECOVER_DD, RECOVER_WIN, COOLDOWN = -0.05, 20, 20
 
 
-def opt_mv(mu, cov, max_weight=MAX_W, max_weights=None):
-    """最大夏普：凸化精确求解；max_weights 为 {列索引: 单独上限}，覆盖默认 max_weight。"""
+def opt_mv(mu, cov, max_weight=MAX_W, fixed_weights=None, caps=None):
+    """最大夏普：凸化精确求解。
+
+    fixed_weights 为 {列索引: 固定目标权重}（等式约束）；
+    caps 为 {列索引: 单只上限}（不等式约束，允许低于上限）。
+    """
     mu = np.asarray(mu, dtype=float)
     cov = np.asarray(cov, dtype=float)
     n = len(mu)
     ex = mu - RF
-    max_weights = max_weights or {}
-    caps = np.full(n, max_weight)
-    for i, cap in max_weights.items():
-        caps[i] = cap
+    fixed_weights = fixed_weights or {}
+    caps = caps or {}
     if np.max(ex) <= 0:
-        # 无正超额收益时退化为最小方差，仍保持上限约束
+        # 无正超额收益时退化为最小方差，仍保持债券上限约束
         cons = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
+        cons += [{'type': 'eq', 'fun': lambda w, i=i, t=t: w[i] - t}
+                 for i, t in fixed_weights.items()]
+        cons += [{'type': 'ineq', 'fun': lambda w, i=i, c=c: c - w[i]}
+                 for i, c in caps.items()]
         res = minimize(lambda w: w @ cov @ w, np.full(n, 1 / n), method='SLSQP',
-                       bounds=[(0, caps[i]) for i in range(n)], constraints=cons,
+                       bounds=[(0, max_weight)] * n, constraints=cons,
                        options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
         return res.x if res.success else None
     y0 = np.clip(ex, 0, None)
     y0 = y0 / (ex @ y0)
     cons = [{'type': 'eq', 'fun': lambda y: ex @ y - 1},
-            {'type': 'ineq', 'fun': lambda y: caps * np.sum(y) - y}]
+            {'type': 'ineq', 'fun': lambda y: max_weight * np.sum(y) - y}]
+    # y=w/sum(y)，故固定 w_i=t 等价于 y_i=t*sum(y)
+    cons += [{'type': 'eq', 'fun': lambda y, i=i, t=t: y[i] - t * np.sum(y)}
+             for i, t in fixed_weights.items()]
+    # 同理 w_i<=c 等价于 y_i<=c*sum(y)
+    cons += [{'type': 'ineq', 'fun': lambda y, i=i, c=c: c * np.sum(y) - y[i]}
+             for i, c in caps.items()]
     res = minimize(lambda y: y @ cov @ y, y0, method='SLSQP',
                    bounds=[(0, None)] * n, constraints=cons,
                    options={'ftol': 1e-14, 'maxiter': 2000, 'disp': False})
@@ -78,10 +90,10 @@ def monthly_target(prices, dt, cache=None):
                 mp = mp.resample('M').last()
             mu = (mp.pct_change(fill_method=None).dropna(how='all').mean() * 12)
             mu = mu.reindex(dret.columns).fillna(0.0).values
-            cap_idx = {dret.columns.get_loc(c): v for c, v in BOND_CAPS.items()}
-            w = opt_mv(mu, cov, max_weights=cap_idx)
+            bond_cap_idx = {dret.columns.get_loc(c): w for c, w in BOND_CAPS.items()}
+            w = opt_mv(mu, cov, caps=bond_cap_idx)
             if w is None:
-                w = opt_mv(mu, cov, max_weight=1.0, max_weights=cap_idx)
+                w = opt_mv(mu, cov, max_weight=1.0, caps=bond_cap_idx)
             if w is not None:
                 s = pd.Series(w, index=dret.columns).clip(lower=0)
                 s = s[s > 1e-6]
