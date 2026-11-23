@@ -1069,7 +1069,7 @@ with open(os.path.join(assets, 'data.js'), 'w', encoding='utf-8') as f:
 
 
 def find_asset(rel):
-    """在当前输出目录或任一历史报告目录中找资源文件"""
+    """在当前输出目录、历史报告目录或 BASE 目录中找资源文件"""
     cand = os.path.join(outdir, rel)
     if os.path.exists(cand):
         return cand
@@ -1077,6 +1077,12 @@ def find_asset(rel):
         p = os.path.join(d, rel)
         if os.path.exists(p):
             return p
+    # Actions 环境：automation/echarts.min.js 或 site/assets/echarts.min.js
+    if rel == '_shared/js/echarts.min.js':
+        for extra in (os.path.join(BASE, 'echarts.min.js'),
+                      os.path.join(BASE, 'site', 'assets', 'echarts.min.js')):
+            if os.path.exists(extra):
+                return extra
     return None
 
 
