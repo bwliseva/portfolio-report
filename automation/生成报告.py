@@ -41,6 +41,8 @@ BOND = '华泰保兴安悦债券C'      # 保留：历史配置默认值
 BONDS = (BOND, '国泰中债1-3年国开债A')  # 止损资金平均分到这两只债券
 BOND_DD = 0.03
 LEVELS = [(0.10, 0.70), (0.18, 0.40), (0.25, 0.00)]   # 权益阶梯减仓：(回撤阈值, 目标仓位)
+# 仅用于持仓定价、不属于模型池的基金（已在配置层被替换），不进入相关系数矩阵
+CORR_EXCLUDE = {'国泰黄金ETF联接C'}
 
 # 资产池 → 大类（顺序与报告附录 E 一致）
 CATEGORY_GROUPS = [
@@ -278,6 +280,12 @@ if os.path.exists(CFG):
     except Exception as e:
         print(f'[警告] {CFG} 读取失败：{e}')
 capital = float(cfg.get('总资产', 0) or 0)
+_env_cap = os.environ.get('TOTAL_ASSET', '').strip()
+if _env_cap:
+    try:
+        capital = float(_env_cap)
+    except ValueError:
+        pass
 cash = float(cfg.get('现金', 0) or 0)
 other_hold = [x for x in (cfg.get('其他持仓') or []) if isinstance(x, dict)]
 base_dt = parse_date(cfg.get('基准日')) or as_of
@@ -530,6 +538,9 @@ for cat, gold, fs in CATEGORY_GROUPS:
         f'<tr><td>{badge}</td><td>{" / ".join(fs)}</td>'
         f'<td class="num">{fp(sum(v for k, v in mv.items() if k in fs))}</td>'
         f'<td class="num">{fp(sum(v for k, v in rp.items() if k in fs))}</td></tr>')
+category_rows.append(
+    '<tr><td><span class="badge">现金</span></td><td>现金（止损后的临时停泊，收益按 0 计）</td>'
+    '<td class="num">0.00%</td><td class="num">0.00%</td></tr>')
 
 # ---------------------------------------------------------------- 6.5 相关系数矩阵（近一年日收益）
 INDEX_CACHE = '指数行情.csv'
@@ -611,10 +622,11 @@ corr_hi_pair = corr_lo_pair = DASH
 corr_hi_val = corr_lo_val = DASH
 corr_high_n, corr_obs = 0, 0
 model_sel = [k for k in sorted(mv_nz, key=lambda x: -mv_nz[x]) if k in FUND_COLS]
+CORR_COLS = [c for c in FUND_COLS if c not in CORR_EXCLUDE]
 
-if prices is not None and len(FUND_COLS) > 1:
+if prices is not None and len(CORR_COLS) > 1:
     daily_ret = (prices.diff() / prices.shift(1)).dropna(how='all')
-    r1y = daily_ret[daily_ret.index >= as_of - pd.DateOffset(years=1)].dropna(how='all')
+    r1y = daily_ret.loc[daily_ret.index >= as_of - pd.DateOffset(years=1), CORR_COLS].dropna(how='all')
     if len(r1y) > 20:
         cm = r1y.corr()
         corr_window = (f'{r1y.index.min().strftime("%Y-%m-%d")} ~ '
@@ -782,14 +794,20 @@ def rolling_rp_curve(prices, start):
     return s / s.iloc[0] - 1
 
 
-ytd_a = ytd_b = None
-# 图 2 与图 5 同一口径：MV/RP 均为月度滚动权重，每月首个交易日用当时可得数据重算并调回
+ytd_a = ytd_b = ytd_c = None
+stop_nav = None
+# 图 2 与图 5 同一口径：MV/RP 均为月度滚动权重；ytd_c 为 MV 叠加阶梯止损后的滚动曲线
+_sim_roll = None
 if prices is not None and ytd_start_dt is not None:
     try:
-        from 止损引擎 import simulate as _simulate_roll
-        _base = _simulate_roll(prices, ytd_start_dt, stop=False)
+        from 止损引擎 import simulate as _sim_roll
+        _base = _sim_roll(prices, ytd_start_dt, stop=False)
         if _base is not None:
             ytd_a = _base['nav'] - 1.0
+        _stopped = _sim_roll(prices, ytd_start_dt, stop=True, cooldown=COOLDOWN, levels=LEVELS)
+        if _stopped is not None:
+            ytd_c = _stopped['nav'] - 1.0
+            stop_nav = _stopped['nav']
         ytd_b = rolling_rp_curve(prices, ytd_start_dt)
     except Exception as e:
         print(f'[警告] 月度滚动曲线计算失败，图 2 回退固定权重口径：{e}')
@@ -797,14 +815,23 @@ if ytd_a is None or ytd_b is None:
     ytd_a = series_sheet('回测_今年以来_起点0')
     ytd_b = series_sheet('风险平价_回测_今年以来_起点0')
 if ytd_a is not None and ytd_b is not None:
-    j = pd.concat([ytd_a, ytd_b], axis=1, join='inner').dropna()
+    frames = [('mv', ytd_a), ('rp', ytd_b)]
+    if ytd_c is not None:
+        frames.append(('mvStop', ytd_c))
+    j = pd.concat([s.rename(n) for n, s in frames], axis=1, join='inner')
+    if 'mvStop' in j.columns:
+        j = j.dropna()
+    else:
+        j = j.dropna()
 else:
     print('[警告] 今年以来回测缺失，图 2 数据为空')
     j = pd.DataFrame(columns=['mv', 'rp'])
 ytd_js = {
     'dates': [d.strftime('%Y-%m-%d') for d in j.index],
-    'mv': [round(float(v) * 100, 2) for v in j.iloc[:, 0]] if len(j) else [],
-    'rp': [round(float(v) * 100, 2) for v in j.iloc[:, 1]] if len(j) else [],
+    'mv': [round(float(v) * 100, 2) for v in j['mv']] if len(j) and 'mv' in j else [],
+    'rp': [round(float(v) * 100, 2) for v in j['rp']] if len(j) and 'rp' in j else [],
+    'mvStop': ([round(float(v) * 100, 2) for v in j['mvStop']]
+               if len(j) and 'mvStop' in j else []),
 }
 
 if dd_df is not None and {'日期', '均值方差_回撤', '风险平价_回撤'} <= set(dd_df.columns):
@@ -816,9 +843,25 @@ if dd_df is not None and {'日期', '均值方差_回撤', '风险平价_回撤'
         'mv': [round(float(v) * 100, 2) for v in dd_s['均值方差_回撤']],
         'rp': [round(float(v) * 100, 2) for v in dd_s['风险平价_回撤']],
     }
+    _stop_map = {}
+    if stop_nav is not None:
+        _sd = (stop_nav / stop_nav.cummax() - 1.0) * 100
+        _sd.index = pd.to_datetime(_sd.index).normalize()
+        _stop_map = {d.strftime('%Y-%m-%d'): round(float(v), 2) for d, v in _sd.items()}
+    dd_js['mvStop'] = [_stop_map.get(d) for d in dd_js['dates']]
+    # 图 4 备注：净值最高点与最深回撤出现的日期
+    _pairs = [(d, float(v) * 100) for d, v in zip(dd_s['日期'], dd_s['均值方差_回撤'])]
+    if _pairs:
+        _lo_d, _lo_v = min(_pairs, key=lambda x: x[1])
+        _hi_d = max(d for d, v in _pairs if v >= -0.005)
+        dd_note = (f'净值最高点出现在 {_hi_d.strftime("%Y-%m-%d")}，'
+                   f'最深回撤 {_lo_v:.2f}% 出现在 {_lo_d.strftime("%Y-%m-%d")}。')
+    else:
+        dd_note = '回撤明细缺失。'
 else:
     print('[警告] 两模型回撤对比缺失，图 4 数据为空')
-    dd_js = {'dates': [], 'mv': [], 'rp': []}
+    dd_js = {'dates': [], 'mv': [], 'rp': [], 'mvStop': []}
+    dd_note = '回撤明细缺失。'
 
 if bt is not None and {'日期', '无止损_累计收益', '冷静20日_累计收益'} <= set(bt.columns):
     bt_s = bt.copy()
@@ -832,6 +875,19 @@ if bt is not None and {'日期', '无止损_累计收益', '冷静20日_累计�
 else:
     print('[警告] 止损每日明细缺失，图 5 数据为空')
     stop_js = {'dates': [], 'base': [], 'stop': []}
+
+def _win_stop(start):
+    """分区间 MV 带止损：区间起点起跑，月度滚动 + 阶梯止损。"""
+    if prices is None or start is None or _sim_roll is None:
+        return None
+    try:
+        _s = _sim_roll(prices, start, stop=True, cooldown=COOLDOWN, levels=LEVELS)
+        if _s is None or len(_s['nav']) == 0:
+            return None
+        return float(_s['nav'].iloc[-1] - 1.0)
+    except Exception:
+        return None
+
 
 payload = {
     'asOf': asof_s,
@@ -851,7 +907,9 @@ payload = {
                        round(ytd_mv * 100, 2) if ok(ytd_mv) else None],
                 'rp': [round(w1_rp * 100, 2) if ok(w1_rp) else None,
                        round(w3_rp * 100, 2) if ok(w3_rp) else None,
-                       round(ytd_rp * 100, 2) if ok(ytd_rp) else None]},
+                       round(ytd_rp * 100, 2) if ok(ytd_rp) else None],
+                'mvStop': [round(v * 100, 2) if ok(v) else None
+                           for v in (_win_stop(w1_start), _win_stop(w3_start), _win_stop(ytd_start_dt))]},
 }
 data_js = 'window.RPT = ' + json.dumps(payload, ensure_ascii=False) + ';\n'
 
@@ -956,6 +1014,7 @@ repl = {
     'ACTION_NOTE': action_note,
     'WINDOWS_ROWS': block(window_rows),
     'DD_MIN_MV': fp(mv_dd, 1),
+    'DD_PEAK_NOTE': dd_note,
     'DD_MIN_RP': fp(rp_dd, 1),
     'BT_START': bt_start.strftime('%Y-%m-%d') if bt_start is not None else DASH,
     'BT_DAYS': str(bt_days) if bt_days else DASH,
