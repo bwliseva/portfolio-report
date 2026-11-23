@@ -156,7 +156,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
 
     <h3>1.1 本月持仓与目标配置（基准 {{BASE_DATE}} 真实持仓）</h3>
-    <p>本表以 <strong>{{BASE_DATE}} 真实持仓</strong>为基准，总资产 <strong>{{TOTAL_ASSETS}} 元</strong>（含现金 {{CASH}} 元）。MV（最大夏普）选入 {{MV_COUNT}} 只，其余 {{ZERO_COUNT}} 只权重为 0；现金与 020603 未纳入模型池，权重记 0，但计入市值合计，因此 MV 权重合计为 100.00%。</p>
+    <p>本表以 <strong>{{BASE_DATE}} 真实持仓</strong>为基准，总资产 <strong>{{TOTAL_ASSETS}} 元</strong>（含现金 {{CASH}} 元）。MV（最大夏普）选入 {{MV_COUNT}} 只，其余 {{ZERO_COUNT}} 只权重为 0；现金不进入模型池，权重记 0，但计入市值合计，因此 MV 权重合计为 100.00%。触发止损后可能出现现金临时持仓，届时该行单独列示。</p>
     <p><strong>月度调仓只在每月 1 日执行</strong>：届时先抓取最新净值，再按同一规则重算并全量调仓；其余交易日只执行单基金止损监控。下表"调仓金额 = 目标权重 × 总资产 − 当前市值"为参考，实际以下月 1 日最新测算为准。</p>
     <div class="table-wrap">
       <table class="wide">
@@ -181,7 +181,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <figcaption>图 1：双模型最优配置权重对比（单位：%）</figcaption>
       <div id="chart-weights" class="chart-box"></div>
     </figure>
-    <p class="cap">MV 中华泰保兴安悦债券C（020741）与国泰中债1-3年国开债A（009593）各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限，仍按等风险贡献求解。</p>
+    <p class="cap">MV 中华泰保兴安悦债券C（020741）与国泰中债1-3年国开债A（009593）各不超过 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限，仍按等风险贡献求解。</p>
 
     <h3>1.2 今日止损监控（{{ASOF}}）</h3>
     <p>按 MV 目标权重监控的 {{MV_COUNT}} 只持仓。回撤基准为各基金自<strong>本轮建仓起点（{{ANCHOR_DATE}}）</strong>以来的最高净值；此后<strong>跨月连续跟踪</strong>，月度调仓只改权重、不清零高点，只有被调出组合（清仓）时才重置。</p>
@@ -205,12 +205,12 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <p>回测每月首个交易日只使用该日之前的数据重估权重并调仓，排除前视偏差；最新一期配置同样由当期最新数据计算。</p>
 
     <figure class="chart-figure">
-      <figcaption>图 2：{{BT_YEAR}} 年以来双模型累计收益率（%，相对首日；MV/RP 均为月度滚动权重）</figcaption>
+      <figcaption>图 2：{{BT_YEAR}} 年以来双模型累计收益率（%，相对首日；MV/RP 均为月度滚动权重，另附 MV 叠加阶梯止损）</figcaption>
       <div id="chart-ytd" class="chart-box"></div>
     </figure>
 
     <figure class="chart-figure">
-      <figcaption>图 3：分区间表现（%，{{BT_YEAR}} 年内，固定当前权重）</figcaption>
+      <figcaption>图 3：分区间表现（%，{{BT_YEAR}} 年内；MV/RP 为固定当前权重，另附 MV 带止损的月度滚动结果）</figcaption>
       <div id="chart-windows" class="chart-box"></div>
     </figure>
     <div class="table-wrap">
@@ -221,16 +221,16 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
         </tbody>
       </table>
     </div>
-    <p class="cap">区间表与图 3 均为固定当前权重口径；图 2 与图 5 为月度滚动权重口径（每月首个交易日用当时可得数据重算），两者数值不可直接对比。</p>
+    <p class="cap">区间表与图 3 的 MV/RP 为固定当前权重口径，其中 MV 带止损一列为区间起点起跑的月度滚动 + 阶梯止损结果；图 2 与图 5 为月度滚动权重口径（每月首个交易日用当时可得数据重算），与固定权重数值不可直接对比。</p>
 
     <figure class="chart-figure">
-      <figcaption>图 4：近一年回撤走势（%）</figcaption>
+      <figcaption>图 4：近一年回撤走势（%，含 MV 带止损）</figcaption>
       <div id="chart-dd" class="chart-box"></div>
     </figure>
-    <p class="cap">两模型回撤曲线高度重合，最深点均在 {{DD_MIN_MV}} ~ {{DD_MIN_RP}}，说明当前组合的风险预算主要由债券与港股红利承担。</p>
+    <p class="cap">{{DD_PEAK_NOTE}} 两模型回撤曲线高度重合，最深点均在 {{DD_MIN_MV}} ~ {{DD_MIN_RP}}，说明当前组合的风险预算主要由债券与港股红利承担。</p>
 
     <h3>2.3 {{CORR_COUNT}} 只基金相关系数矩阵</h3>
-    <p>取近一年日收益（{{CORR_WINDOW}}，共 {{CORR_OBS}} 个交易日）计算 <strong>{{CORR_METHOD}} 相关系数</strong>：全池各对基金平均 {{CORR_AVG_ALL}}，其中 {{CORR_HIGH_N}} 对高于 0.80。相关性最高的一对是 <strong>{{CORR_HIGH_PAIR}}</strong>（{{CORR_HIGH_VAL}}），最低的是 {{CORR_LOW_PAIR}}（{{CORR_LOW_VAL}}）；模型选中的 {{MV_COUNT}} 只基金两两平均仅 {{CORR_AVG_SEL}}，明显低于全池，说明优化后的组合在相关性层面确实更分散，债券与权益资产近乎不相关是主要分散来源。</p>
+    <p>取近一年日收益（{{CORR_WINDOW}}，共 {{CORR_OBS}} 个交易日）计算 <strong>{{CORR_METHOD}} 相关系数</strong>：全池（不含已替换的旧品种）各对基金平均 {{CORR_AVG_ALL}}，其中 {{CORR_HIGH_N}} 对高于 0.80。相关性最高的一对是 <strong>{{CORR_HIGH_PAIR}}</strong>（{{CORR_HIGH_VAL}}），最低的是 {{CORR_LOW_PAIR}}（{{CORR_LOW_VAL}}）；模型选中的 {{MV_COUNT}} 只基金两两平均仅 {{CORR_AVG_SEL}}，明显低于全池，说明优化后的组合在相关性层面确实更分散，债券与权益资产近乎不相关是主要分散来源。</p>
     <figure class="chart-figure">
       <figcaption>图 6：{{CORR_COUNT}} 只基金近一年日收益相关系数矩阵（{{CORR_METHOD}}）</figcaption>
       <div id="chart-corr" class="chart-box"></div>
@@ -309,7 +309,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
   <section class="app" id="a1">
     <h2 class="sec"><span class="num">A</span>月度滚动流程</h2>
     <div class="sec-rule"></div>
-    <p>每月 1 日 9:00 由计划任务自动执行，把"数据 → 模型 → 新权重 → 报告 → 调仓"跑成流水线。</p>
+    <p>每月 1 日 09:00 由 GitHub Actions 定时触发，把"数据 → 模型 → 新权重 → 报告 → 调仓"跑成流水线。</p>
     <div class="flow">
       <div class="item"><div class="when">第 1 步</div><div class="what"><b>python 基金数据获取.py</b><br>自动抓取 {{FETCH_COUNT}} 只基金最新净值（含仅用于止损监控的基金），生成 <code>每日基金净值_自动_YYYYMMDD.xlsx</code>，并与上期数据做一致性校验（偏差应 ≤ 0.05 个百分点）。</div></div>
       <div class="item"><div class="when">第 2 步</div><div class="what"><b>python 更新测算.py</b><br>按"月度收益近 3 年 + 日度协方差近 1 年"重估，输出两组新权重、组合指标与三区间回测，刷新 <code>投资组合分析明细.xlsx</code> 与全部图表。</div></div>
@@ -326,7 +326,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
   <section class="app" id="a2">
     <h2 class="sec"><span class="num">B</span>每日止损监控说明</h2>
     <div class="sec-rule"></div>
-    <p>脚本 <code>每日止损监控.py</code>，由计划任务每天 22:00 自动运行；也可双击或在终端手动执行。输出结果见本文开头的 <a href="#s1">1.2 今日止损监控</a>。</p>
+    <p>脚本 <code>每日止损监控.py</code>，由 GitHub Actions 每个交易日 22:07 自动运行（22:37 兜底重试，当天已推送则跳过）；也可手动执行。输出结果见本文开头的 <a href="#s1">1.2 今日止损监控</a>。</p>
     <ul>
       <li>先调用数据抓取，拿到当天最新净值；</li>
       <li>读取本月配置权重（来自 <code>投资组合分析明细.xlsx</code> 的最优配置权重）；</li>
@@ -345,7 +345,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
     <div class="sec-rule"></div>
     <h3>纪律红线</h3>
     <ul>
-      <li><strong>只按模型调仓，不主观加码。</strong>MV 中 020741 与 009593 各固定 20%，其余单只基金不超过 30%；每月 1 日用最新数据重算并全量调仓（RP 不施加上述约束）。</li>
+      <li><strong>只按模型调仓，不主观加码。</strong>MV 中 020741 与 009593 各不超过 20%，其余单只基金不超过 30%；每月 1 日用最新数据重算并全量调仓（RP 不施加上述约束）。</li>
       <li><strong>止损触发即执行，不改阈值。</strong>权益 10% 减至 70%、18% 减至 40%、25% 清仓，债券 3% 清仓，触发当天处理。</li>
       <li><strong>高点跨月连续跟踪，调仓不清零。</strong>月度调仓只改权重，各基金的回撤基准继续沿用；只有被调出组合（清仓）才重新起算。</li>
       <li><strong>止损后必须走冷静期。</strong>20 个交易日内禁止回补，且回补需同时满足两个条件。</li>
@@ -358,8 +358,8 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
       <table>
         <thead><tr><th>频率</th><th>时点</th><th>动作</th><th>工具</th></tr></thead>
         <tbody>
-          <tr><td>每日</td><td>交易日 22:00（计划任务自动）</td><td>运行止损监控，查看是否有触发</td><td><code>每日止损监控.py</code></td></tr>
-          <tr><td>每月 1 日</td><td>9:00（计划任务自动，不做工作日顺延）</td><td>抓数据 → 重估权重 → 生成报告 → 推送调仓卡片；按新权重视偏差调仓（止损高点与状态<b>不清零</b>）</td><td><code>基金数据获取.py</code> + <code>更新测算.py</code> + <code>生成报告.py</code></td></tr>
+          <tr><td>每日</td><td>交易日 22:07（GitHub Actions 定时触发，22:37 兜底重试）</td><td>运行止损监控，查看是否有触发</td><td><code>每日止损监控.py</code></td></tr>
+          <tr><td>每月 1 日</td><td>09:00（GitHub Actions 定时触发，不做工作日顺延）</td><td>抓数据 → 重估权重 → 生成报告 → 推送调仓卡片；按新权重视偏差调仓（止损高点与状态<b>不清零</b>）</td><td><code>基金数据获取.py</code> + <code>更新测算.py</code> + <code>生成报告.py</code></td></tr>
           <tr><td>每季</td><td>季末</td><td>复核大类配置与模型权重稳定性</td><td>本报告第 1 章、附录 E</td></tr>
           <tr><td>每年</td><td>年末</td><td>复核资产池、复核止损阈值</td><td>回测脚本 + 本报告</td></tr>
         </tbody>
@@ -379,7 +379,7 @@ footer .sources .src-url { display: block; margin-top: .12rem; font-size: 12.5px
           <tr><td>有效区间</td><td>{{DATA_RANGE}}；各基金按自身可得净值起点进入，不以最晚成立基金截断全表</td></tr>
           <tr><td>收益率估计</td><td>先以 1 + 累计收益率还原净值指数，再计算月末净值环比；近 3 年平均月收益 × 12 折算年化</td></tr>
           <tr><td>协方差估计</td><td>由还原后的净值指数计算日收益，近 1 年协方差 × 252 折算年化；不直接对累计收益率做差分</td></tr>
-          <tr><td>优化约束</td><td>MV 权重非负、合计为 1；020741 与 009593 各固定 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限</td></tr>
+          <tr><td>优化约束</td><td>MV 权重非负、合计为 1；020741 与 009593 各不超过 20%，其余单只基金上限 30%；RP 不施加固定权重与单只上限</td></tr>
           <tr><td>回测权重</td><td>每月首个交易日只用该日之前的数据重估并调仓，两次调仓之间份额固定、权重随净值漂移，无前视偏差</td></tr>
         </tbody>
       </table>
