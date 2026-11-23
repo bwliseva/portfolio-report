@@ -722,7 +722,11 @@ else:
 print(f'\n网站已生成：{OUT}')
 print(f'数据日 {payload["asof"]}（指数 {payload["indexAsOf"]}）｜{len(dates)} 个交易日')
 for k in ['mv_stop', 'mv', 'real_stop', 'real', 'rp']:
-    print(f'  {k:10s} {kpi[k]:+7.2f}%（较沪深300 {kpi[k + "_ex"]:+.2f}%）')
+    ex = kpi.get(k + '_ex')
+    if ex is None:
+        print(f'  {k:10s} {kpi[k]:+7.2f}%')
+    else:
+        print(f'  {k:10s} {kpi[k]:+7.2f}%（较沪深300 {ex:+.2f}%）')
 print(f'  沪深300   {hs300:+7.2f}%｜指数源 {idx_src}')
 
 # ---------------------------------------------------------------- 自动部署
